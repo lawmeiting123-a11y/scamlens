@@ -5,11 +5,16 @@
   <meta name="viewport" content="width=device-width, initial-scale=1" />
   <title>ScamLens — AI Anti-Scam Assistant</title>
   <style>
+    /* Theme tokens & visual palette for the commercial-grade ScamLens prototype */
     :root{
       --bg: #070d19;
+      --bg-elevated: #0f172a;
+      --panel: rgba(22, 33, 54, 0.86);
+      --panel-solid: #162136;
       --panel-inner: rgba(10, 17, 32, 0.78);
       --emerald: #10b981;
       --emerald-bright: #34d399;
+      --emerald-deep: #059669;
       --cyan: #38bdf8;
       --danger: #ef4444;
       --danger-bright: #fca5a5;
@@ -29,6 +34,7 @@
       --risk-high-bg: rgba(239, 68, 68, 0.16);
       --risk-high: #f87171;
     }
+
     *{ box-sizing:border-box; }
     html,body{ height:100%; }
     body{
@@ -37,638 +43,206 @@
       background:
         radial-gradient(960px 540px at 50% -10%, rgba(16, 185, 129, 0.18), transparent 60%),
         radial-gradient(760px 440px at 8% 32%, rgba(56, 189, 248, 0.10), transparent 62%),
+        radial-gradient(640px 420px at 92% 78%, rgba(16, 185, 129, 0.08), transparent 60%),
         var(--bg);
       color: var(--text);
       -webkit-font-smoothing: antialiased;
     }
-    .shell{ min-height:100%; display:flex; align-items:center; justify-content:center; padding:16px 12px 22px; }
+
+    /* Outer desktop framing & inner mobile-first viewport container */
+    .shell{
+      min-height:100%;
+      display:flex;
+      align-items:center;
+      justify-content:center;
+      padding:16px 12px 22px;
+    }
     .phone{
-      width:100%; max-width:430px; height:86dvh; max-height:880px;
+      width:100%;
+      max-width: 430px;
+      height: 86dvh;
+      max-height: 880px;
       background: linear-gradient(180deg, rgba(13, 21, 38, 0.96) 0%, rgba(8, 14, 27, 0.99) 100%);
-      border:1px solid rgba(52, 211, 153, 0.28); border-radius:22px; box-shadow:var(--glow);
-      overflow:hidden; position:relative; display:flex; flex-direction:column;
+      border: 1px solid rgba(52, 211, 153, 0.28);
+      border-radius: 22px;
+      box-shadow: var(--glow);
+      overflow:hidden;
+      position:relative;
+      display:flex;
+      flex-direction:column;
     }
-    @media (max-width:440px){
-      .shell{ padding:0; }
-      .phone{ border-radius:0; height:100dvh; max-height:none; border-left:none; border-right:none; }
+    @media (max-width: 440px){
+      .shell{ padding: 0; }
+      .phone{ border-radius: 0; height: 100dvh; max-height: none; border-left: none; border-right: none; }
     }
+    @media (max-width: 380px){
+      .scanActionRow{ flex-direction: column; }
+      .scanActionRow .btn{ width: 100% !important; }
+    }
+
+    /* Top app bar with custom ScamLens shield-lens vector mark */
     header.appbar{
-      padding:13px 16px 12px; border-bottom:1px solid var(--line);
+      padding: 13px 16px 12px;
+      border-bottom: 1px solid var(--line);
       background: linear-gradient(180deg, rgba(15, 23, 42, 0.96), rgba(11, 18, 34, 0.90));
-      flex:0 0 auto; z-index:5;
+      backdrop-filter: blur(12px);
+      flex: 0 0 auto;
+      z-index: 5;
     }
     .brandRow{ display:flex; align-items:center; justify-content:space-between; gap:12px; }
     .brandTitle{ display:flex; align-items:center; gap:11px; }
+
     .brandIcon{
-      width:40px; height:40px; border-radius:13px;
+      width: 40px;
+      height: 40px;
+      border-radius: 13px;
       background: linear-gradient(145deg, rgba(16, 185, 129, 0.24), rgba(6, 78, 59, 0.55));
-      border:1px solid rgba(52, 211, 153, 0.52); display:grid; place-items:center; flex:0 0 auto;
+      border: 1px solid rgba(52, 211, 153, 0.52);
+      box-shadow: 0 0 18px rgba(16, 185, 129, 0.28), inset 0 1px 0 rgba(255, 255, 255, 0.16);
+      display: grid;
+      place-items: center;
+      flex: 0 0 auto;
+      position: relative;
     }
-    .brandText h1{ font-size:17px; font-weight:800; margin:0; }
-    .brandText h1 .accent{ color:var(--emerald-bright); }
-    .brandText .sub{ margin-top:2px; font-size:11.5px; color:var(--muted); }
+    .brandIcon svg{
+      width: 26px;
+      height: 26px;
+      display: block;
+    }
+    .brandIconLg{
+      width: 64px;
+      height: 64px;
+      border-radius: 18px;
+      box-shadow: 0 0 26px rgba(16, 185, 129, 0.34), inset 0 1px 0 rgba(255, 255, 255, 0.22);
+    }
+    .brandIconLg svg{
+      width: 42px;
+      height: 42px;
+    }
+
+    .brandText h1{
+      font-size: 17px;
+      font-weight: 800;
+      letter-spacing: -0.02em;
+      margin:0;
+      line-height: 1.15;
+      display:flex;
+      align-items:center;
+      gap:4px;
+    }
+    .brandText h1 .accent{ color: var(--emerald-bright); }
+    .brandText .sub{
+      margin-top: 2px;
+      font-size: 11.5px;
+      color: var(--muted);
+      letter-spacing: 0.01em;
+    }
     .statusPill{
-      display:inline-flex; align-items:center; gap:6px; font-size:11px; color:var(--emerald-bright);
-      background:rgba(16, 185, 129, 0.14); border:1px solid rgba(52, 211, 153, 0.38);
-      padding:5px 10px; border-radius:999px; font-weight:700; white-space:nowrap;
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      font-size: 11px;
+      color: var(--emerald-bright);
+      background: rgba(16, 185, 129, 0.14);
+      border: 1px solid rgba(52, 211, 153, 0.38);
+      padding: 5px 10px;
+      border-radius: 999px;
+      font-weight: 700;
+      white-space: nowrap;
     }
-    .pulseDot{ width:7px; height:7px; border-radius:999px; background:var(--emerald-bright); }
+    .pulseDot{
+      width: 7px;
+      height: 7px;
+      border-radius: 999px;
+      background: var(--emerald-bright);
+      box-shadow: 0 0 8px var(--emerald-bright);
+    }
+
+    /* Scrollable main view area with subtle dark scrollbar & bottom clearance */
     main{
-      padding:16px 15px 96px; flex:1 1 auto; min-height:0; overflow-y:auto;
-      display:flex; flex-direction:column;
+      padding: 16px 15px 104px;
+      flex: 1 1 auto;
+      min-height: 0;
+      overflow-y: auto;
+      scroll-behavior: smooth;
+      display:flex;
+      flex-direction:column;
+      scrollbar-width: thin;
+      scrollbar-color: rgba(52, 211, 153, 0.24) transparent;
     }
-    .screen{ display:none; flex-direction:column; gap:15px; }
+    main::-webkit-scrollbar{
+      width: 5px;
+    }
+    main::-webkit-scrollbar-track{
+      background: transparent;
+    }
+    main::-webkit-scrollbar-thumb{
+      background: rgba(52, 211, 153, 0.24);
+      border-radius: 999px;
+    }
+    main::-webkit-scrollbar-thumb:hover{
+      background: rgba(52, 211, 153, 0.42);
+    }
+    .screen{ display:none; flex-direction:column; gap:16px; animation: fadeInScreen .18s ease; }
     .screen.active{ display:flex; }
-    #screen-login.active{ flex:1; justify-content:center; min-height:100%; }
+    @keyframes fadeInScreen{
+      from{ opacity: 0.65; transform: translateY(3px); }
+      to{ opacity: 1; transform: translateY(0); }
+    }
+    #screen-login.active{
+      flex:1;
+      justify-content:center;
+      min-height: 100%;
+    }
+
+    /* Elevated card surfaces (fintech & security utility rhythm) */
     .card{
       background: linear-gradient(180deg, rgba(23, 35, 58, 0.92), rgba(15, 24, 42, 0.95));
-      border:1px solid rgba(148, 163, 184, 0.14); box-shadow:var(--card-shadow);
-      border-radius:18px; padding:16px;
-    }
-    .heroCard{
-      background: radial-gradient(115% 95% at 95% 0%, rgba(16, 185, 129, 0.18), transparent 56%), linear-gradient(180deg, rgba(25, 40, 66, 0.96), rgba(14, 23, 40, 0.98));
-      border:1px solid rgba(52, 211, 153, 0.34);
+      border: 1px solid rgba(148, 163, 184, 0.14);
+      box-shadow: var(--card-shadow);
+      border-radius: 18px;
+      padding: 16px;
     }
     .sectionCard{
-      background: rgba(16, 26, 46, 0.78); border:1px solid rgba(148, 163, 184, 0.12);
-      border-radius:16px; padding:14px 15px;
+      background: rgba(16, 26, 46, 0.78);
+      border: 1px solid rgba(148, 163, 184, 0.12);
+      border-radius: 16px;
+      padding: 14px 15px;
+      box-shadow: 0 4px 16px rgba(2, 6, 23, 0.24);
     }
-    .sectionTag{ font-size:11px; font-weight:700; text-transform:uppercase; color:var(--emerald-bright); }
-    .h2{ font-size:18px; font-weight:800; margin:0; }
-    .title{ font-size:14px; font-weight:800; margin:0 0 6px 0; }
-    .small{ font-size:13px; }
-    .tiny{ font-size:12px; }
-    .muted{ color:var(--muted); }
-    .stack{ display:flex; flex-direction:column; gap:10px; }
-    .row{ display:flex; gap:8px; align-items:center; flex-wrap:wrap; }
-    .rowBetween{ display:flex; gap:10px; align-items:center; justify-content:space-between; }
     .sessionPill{
-      display:inline-flex; align-items:center; font-size:11px; color:var(--text-soft);
-      background:rgba(10, 17, 32, 0.72); border:1px solid rgba(148, 163, 184, 0.18);
-      padding:4px 9px; border-radius:999px; margin-top:6px;
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      font-size: 11px;
+      color: var(--text-soft);
+      background: rgba(10, 17, 32, 0.72);
+      border: 1px solid rgba(148, 163, 184, 0.18);
+      padding: 4px 9px;
+      border-radius: 999px;
+      margin-top: 6px;
+      max-width: 100%;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      white-space: nowrap;
     }
-    .authModeBar{
-      display:grid; grid-template-columns:1fr 1fr; gap:6px; padding:4px;
-      border-radius:12px; background:rgba(9, 15, 28, 0.85); border:1px solid var(--line-subtle);
+    .presetsPanel{
+      display: none;
+      flex-direction: column;
+      gap: 9px;
+      padding-top: 10px;
+      margin-top: 2px;
+      border-top: 1px solid rgba(148, 163, 184, 0.12);
     }
-    .authModeBtn{
-      border:none; background:transparent; color:var(--muted); font-size:12px; font-weight:700;
-      padding:8px 10px; border-radius:9px; cursor:pointer;
+    .presetsPanel.open{
+      display: flex;
     }
-    .authModeBtn.active{
-      background:rgba(16, 185, 129, 0.18); color:var(--emerald-bright);
-      border:1px solid rgba(52, 211, 153, 0.35);
+    .subMetaLine{
+      font-size: 11px;
+      color: var(--muted);
+      margin-top: 2px;
     }
-    .authHintBox{
-      font-size:11.5px; color:var(--muted); background:rgba(10, 17, 32, 0.65);
-      border:1px solid rgba(148, 163, 184, 0.14); border-radius:11px; padding:8px 10px; line-height:1.45;
-    }
-    label.fieldLabel{ display:block; font-size:12px; font-weight:700; color:var(--text-soft); margin-bottom:5px; }
-    textarea, select, input{
-      width:100%; background:rgba(9, 15, 28, 0.92); border:1px solid rgba(148, 163, 184, 0.26);
-      border-radius:12px; color:var(--text); padding:10px 12px; font-family:inherit; font-size:13px;
-    }
-    .btn{
-      border:1px solid rgba(52, 211, 153, 0.28); background:rgba(16, 185, 129, 0.10);
-      color:var(--text); padding:11px 13px; border-radius:12px; font-weight:700; cursor:pointer;
-      width:100%; display:inline-flex; align-items:center; justify-content:center; gap:7px;
-      min-height:44px; font-size:13px;
-    }
-    .btnPrimary{
-      background:linear-gradient(135deg, #10b981 0%, #059669 100%);
-      color:#031c14; border-color:rgba(110, 231, 183, 0.75);
-    }
-    .btnGhost{ background:rgba(15, 23, 42, 0.55); border-color:var(--line-subtle); color:var(--text-soft); }
-    .btnDanger{ background:rgba(239, 68, 68, 0.14); border-color:rgba(239, 68, 68, 0.42); color:var(--danger-bright); }
-    .btnInline{ width:auto; padding:7px 11px; border-radius:10px; min-height:36px; font-size:12px; }
-    .alertBanner{
-      border-radius:12px; padding:10px 12px; font-size:12px; font-weight:600; display:none;
-    }
-    .alertBanner.show{ display:block; }
-    .alertError{ color:var(--danger-bright); background:rgba(239, 68, 68, 0.14); border:1px solid rgba(239, 68, 68, 0.45); }
-    .statGrid{ display:grid; grid-template-columns:1fr 1fr; gap:10px; }
-    .statBox{ background:var(--panel-inner); border:1px solid var(--line-subtle); border-radius:13px; padding:11px 12px; }
-    .statNum{ font-size:22px; font-weight:800; color:var(--emerald-bright); margin-top:2px; }
-    .quoteBox{
-      background:var(--panel-inner); border:1px solid var(--line); border-radius:12px;
-      padding:11px 12px; font-size:13px; line-height:1.5; color:var(--text-soft); word-break:break-word;
-    }
-    .badge{ padding:4px 10px; border-radius:999px; font-size:11px; font-weight:800; display:inline-flex; }
-    .badge-high{ background:var(--risk-high-bg); color:var(--risk-high); border:1px solid rgba(248, 113, 113, 0.45); }
-    .badge-med{ background:var(--risk-med-bg); color:var(--risk-med); border:1px solid rgba(251, 191, 36, 0.45); }
-    .badge-low{ background:var(--risk-low-bg); color:var(--risk-low); border:1px solid rgba(52, 211, 153, 0.45); }
-    .recentCard{ background:var(--panel-inner); border:1px solid var(--line-subtle); border-radius:12px; padding:10px 12px; cursor:pointer; }
-    .recentCard:hover{ border-color:rgba(52, 211, 153, 0.45); }
-    ul.cleanList{ margin:6px 0 0; padding-left:18px; font-size:13px; line-height:1.55; color:var(--text-soft); }
-    details.detailBox{
-      background:var(--panel-inner); border:1px solid var(--line-subtle); border-radius:12px; padding:10px 12px;
-    }
-    details.detailBox summary{ cursor:pointer; font-size:12.5px; font-weight:700; color:var(--emerald-bright); }
-    .toastBanner{
-      position:fixed; left:50%; bottom:84px; transform:translateX(-50%); max-width:390px;
-      width:calc(100% - 28px); padding:10px 14px; border-radius:12px; font-size:12px; font-weight:700;
-      z-index:30; background:rgba(15, 23, 42, 0.97); border:1px solid rgba(52, 211, 153, 0.55);
-      color:var(--text); display:none;
-    }
-    nav.bottomNav{
-      position:relative; flex:0 0 auto; width:100%; background:rgba(10, 17, 32, 0.98);
-      border-top:1px solid var(--line); display:grid; grid-template-columns:repeat(4, 1fr);
-      padding:8px 8px; gap:4px; z-index:10;
-    }
-    .navBtn{
-      background:none; border:1px solid transparent; color:var(--muted); font-size:11px; font-weight:700;
-      padding:6px 4px; cursor:pointer; display:flex; flex-direction:column; align-items:center; gap:3px;
-      border-radius:11px; min-height:46px;
-    }
-    .navBtn.active{ color:var(--emerald-bright); background:rgba(16, 185, 129, 0.14); border-color:rgba(52, 211, 153, 0.28); }
-  </style>
-</head>
-<body>
-<div class="shell">
-  <div class="phone">
-    <header class="appbar">
-      <div class="brandRow">
-        <div class="brandTitle">
-          <div class="brandIcon">🛡️</div>
-          <div class="brandText">
-            <h1>Scam<span class="accent">Lens</span></h1>
-            <div class="sub">HK AI Anti-Scam Shield</div>
-          </div>
-        </div>
-        <span class="statusPill"><span class="pulseDot"></span>LOCAL GUARD</span>
-      </div>
-    </header>
-
-    <main id="main-scroll">
-      <section id="screen-login" class="screen active">
-        <div class="card heroCard stack" style="gap:13px;">
-          <div>
-            <span class="sectionTag">Hong Kong Anti-Scam MVP</span>
-            <h2 class="h2" id="auth-heading" style="margin-top:4px;">Welcome to ScamLens</h2>
-            <div class="tiny muted" style="margin-top:2px;">Instant phishing, parcel &amp; bank impersonation check</div>
-          </div>
-
-          <div class="authModeBar">
-            <button type="button" class="authModeBtn active" id="tab-signin" onclick="setAuthMode('signin')">Sign In</button>
-            <button type="button" class="authModeBtn" id="tab-signup" onclick="setAuthMode('signup')">Sign Up</button>
-          </div>
-
-          <div id="login-error" class="alertBanner alertError" role="alert">
-            <span id="login-error-text">Please enter both email and password, or continue in Guest Mode.</span>
-          </div>
-
-          <div>
-            <label class="fieldLabel" for="login-email">Email</label>
-            <input id="login-email" type="email" placeholder="name@example.com" />
-          </div>
-
-          <div>
-            <label class="fieldLabel" for="login-password">Password</label>
-            <input id="login-password" type="password" placeholder="Enter your password" />
-          </div>
-
-          <div id="signup-confirm-wrap" style="display:none;">
-            <label class="fieldLabel" for="signup-confirm">Confirm Password</label>
-            <input id="signup-confirm" type="password" placeholder="Re-enter your password" />
-          </div>
-
-          <div class="authHintBox" id="auth-mode-hint">
-            Local prototype auth: enter email &amp; password to sign in, or continue in Guest Mode.
-          </div>
-
-          <div class="stack" style="gap:8px;margin-top:2px;">
-            <button type="button" class="btn btnPrimary" id="btn-login" onclick="handleAuthSubmit()">Sign In to Dashboard</button>
-            <button type="button" class="btn btnGhost" id="btn-guest" onclick="continueAsGuest()">Continue as Guest</button>
-          </div>
-        </div>
-      </section>
-
-      <section id="screen-home" class="screen">
-        <div class="card heroCard stack" style="gap:13px;">
-          <div class="rowBetween" style="align-items:flex-start;">
-            <div>
-              <span class="sectionTag">Protection Hub</span>
-              <h2 class="h2" style="margin-top:3px;">Security Summary</h2>
-              <div class="sessionPill" id="session-status">Not signed in</div>
-            </div>
-            <button type="button" class="btn btnDanger btnInline" onclick="logoutSession()">Sign Out</button>
-          </div>
-          <div class="statGrid">
-            <div class="statBox">
-              <div class="tiny muted">Total Checks</div>
-              <div class="statNum" id="stat-total">0</div>
-            </div>
-            <div class="statBox">
-              <div class="tiny muted">High Risk Caught</div>
-              <div class="statNum" id="stat-high" style="color:var(--risk-high);">0</div>
-            </div>
-          </div>
-          <button type="button" class="btn btnPrimary" onclick="goScreen('scan')">+ New Scam Check</button>
-        </div>
-
-        <div class="sectionCard stack">
-          <div class="title" style="margin:0;">Recent Scans</div>
-          <div id="recent-scans-list" class="stack"></div>
-        </div>
-
-        <details class="detailBox">
-          <summary>Prototype &amp; Local Storage Notes</summary>
-          <ul class="cleanList" style="margin-top:8px;">
-            <li>Runs locally in your browser with demo authentication and Guest Mode.</li>
-            <li>Scan records are stored in local browser storage for quick demo testing.</li>
-          </ul>
-        </details>
-      </section>
-
-      <section id="screen-scan" class="screen">
-        <div class="card stack">
-          <h2 class="h2">Analyze Suspicious Content</h2>
-          <div id="scan-alert" class="alertBanner alertError" role="alert"></div>
-          <div>
-            <label class="fieldLabel" for="scan-channel">Channel</label>
-            <select id="scan-channel">
-              <option value="SMS / Text">SMS / Text Message</option>
-              <option value="WhatsApp / Instant Chat">WhatsApp / Instant Chat</option>
-              <option value="Website / Link">Suspicious Link / URL</option>
-              <option value="Phone Call">Phone Call / Caller ID</option>
-            </select>
-          </div>
-          <div>
-            <label class="fieldLabel" for="scan-input">Message or Link</label>
-            <textarea id="scan-input" rows="4" placeholder="Paste suspicious message or link..."></textarea>
-          </div>
-          <div class="row">
-            <button type="button" class="btn btnGhost btnInline" onclick="loadSample('sms')">Sample Parcel</button>
-            <button type="button" class="btn btnGhost btnInline" onclick="loadSample('bank')">Sample Bank</button>
-            <button type="button" class="btn btnGhost btnInline" onclick="loadSample('safe')">Sample Safe</button>
-          </div>
-          <button type="button" class="btn btnPrimary" id="btn-analyze" onclick="runAnalysis()">Analyze Risk</button>
-        </div>
-      </section>
-
-      <section id="screen-result" class="screen">
-        <div class="card stack">
-          <div class="rowBetween">
-            <span id="res-badge" class="badge badge-low">LOW RISK</span>
-            <span id="res-score" class="small" style="font-weight:800;">Risk Score: 12/100</span>
-          </div>
-          <h2 class="h2" id="res-title">No Scan Selected Yet</h2>
-          <div class="tiny muted" id="res-meta">Run a scan to inspect risk indicators</div>
-          <div class="quoteBox" id="res-original">No content analyzed yet.</div>
-          <div>
-            <div class="title">Detected Red Flags</div>
-            <ul class="cleanList" id="res-reasons"><li>No scan data available yet.</li></ul>
-          </div>
-          <div>
-            <div class="title">Recommended Safe Actions</div>
-            <ul class="cleanList" id="res-actions"><li>Go to Scan tab and test a sample or message.</li></ul>
-          </div>
-          <button type="button" class="btn btnPrimary" onclick="goScreen('scan')">Check Another</button>
-        </div>
-      </section>
-
-      <section id="screen-history" class="screen">
-        <div class="card stack">
-          <div class="rowBetween">
-            <h2 class="h2">Scan History</h2>
-            <div class="row" style="gap:6px;">
-              <button type="button" class="btn btnGhost btnInline" onclick="exportHistoryJson()">Export</button>
-              <button type="button" class="btn btnDanger btnInline" onclick="clearHistory()">Clear</button>
-            </div>
-          </div>
-          <div>
-            <input id="history-search" type="search" placeholder="Search keyword, channel, or risk..." oninput="renderHistory()" />
-          </div>
-          <div id="history-list" class="stack"></div>
-        </div>
-      </section>
-    </main>
-
-    <div id="toast-banner" class="toastBanner" role="status" aria-live="polite"></div>
-
-    <nav class="bottomNav" id="bottom-nav" style="display:none;">
-      <button type="button" class="navBtn active" id="nav-home" onclick="goScreen('home')"><span>🏠</span><span>Home</span></button>
-      <button type="button" class="navBtn" id="nav-scan" onclick="goScreen('scan')"><span>🔍</span><span>Scan</span></button>
-      <button type="button" class="navBtn" id="nav-result" onclick="goScreen('result')"><span>🛡️</span><span>Result</span></button>
-      <button type="button" class="navBtn" id="nav-history" onclick="goScreen('history')"><span>📋</span><span>History</span></button>
-    </nav>
-  </div>
-</div>
-
-<script>
-  const STORAGE_KEY = 'scamlens_history_v1';
-  const AUTH_KEY = 'scamlens_auth_session_v1';
-  const memoryStore = {};
-  let authMode = 'signin';
-  let toastTimer = null;
-
-  function safeGet(key) {
-    try { return window.localStorage.getItem(key); }
-    catch (e) { return Object.prototype.hasOwnProperty.call(memoryStore, key) ? memoryStore[key] : null; }
-  }
-
-  function safeSet(key, val) {
-    try { window.localStorage.setItem(key, val); }
-    catch (e) { memoryStore[key] = val; }
-  }
-
-  function safeRemove(key) {
-    try { window.localStorage.removeItem(key); }
-    catch (e) { delete memoryStore[key]; }
-  }
-
-  function escapeHtml(str) {
-    return String(str || '').replace(/[&<>"']/g, ch => ({
-      '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;'
-    }[ch]));
-  }
-
-  function showToast(msg) {
-    const el = document.getElementById('toast-banner');
-    if (!el) return;
-    el.textContent = msg;
-    el.style.display = 'block';
-    clearTimeout(toastTimer);
-    toastTimer = setTimeout(() => { el.style.display = 'none'; }, 2200);
-  }
-
-  function getAuthSession() {
-    try { return JSON.parse(safeGet(AUTH_KEY) || 'null'); }
-    catch (e) { return null; }
-  }
-
-  function setAuthSession(sessionObj) {
-    safeSet(AUTH_KEY, JSON.stringify(sessionObj));
-    updateSessionLabel();
-  }
-
-  function updateSessionLabel() {
-    const label = document.getElementById('session-status');
-    const session = getAuthSession();
-    if (!label) return;
-    if (!session) {
-      label.textContent = 'Not signed in';
-      return;
-    }
-    label.textContent = session.mode === 'guest'
-      ? 'Guest Mode • Local Demo'
-      : 'Signed in: ' + (session.email || 'Demo User');
-  }
-
-  function showAuthError(msg) {
-    const box = document.getElementById('login-error');
-    const txt = document.getElementById('login-error-text');
-    if (txt) txt.textContent = msg;
-    if (box) box.classList.add('show');
-  }
-
-  function clearAuthError() {
-    const box = document.getElementById('login-error');
-    if (box) box.classList.remove('show');
-  }
-
-  function setAuthMode(mode) {
-    authMode = mode === 'signup' ? 'signup' : 'signin';
-    clearAuthError();
-    document.getElementById('tab-signin').classList.toggle('active', authMode === 'signin');
-    document.getElementById('tab-signup').classList.toggle('active', authMode === 'signup');
-    document.getElementById('signup-confirm-wrap').style.display = authMode === 'signup' ? 'block' : 'none';
-    document.getElementById('btn-login').textContent = authMode === 'signup' ? 'Create Local Account' : 'Sign In to Dashboard';
-    const heading = document.getElementById('auth-heading');
-    if (heading) heading.textContent = authMode === 'signup' ? 'Create ScamLens Account' : 'Welcome to ScamLens';
-    const hint = document.getElementById('auth-mode-hint');
-    if (hint) {
-      hint.textContent = authMode === 'signup'
-        ? 'Local prototype sign-up: creates a demo session locally without sending data to a remote server.'
-        : 'Local prototype auth: enter email & password to sign in, or continue in Guest Mode.';
-    }
-  }
-
-  function handleAuthSubmit() {
-    const email = (document.getElementById('login-email').value || '').trim().toLowerCase();
-    const pass = (document.getElementById('login-password').value || '').trim();
-    if (!email || !pass) {
-      showAuthError('Please enter both email and password, or continue in Guest Mode.');
-      return;
-    }
-    if (authMode === 'signup') {
-      const confirmPass = (document.getElementById('signup-confirm').value || '').trim();
-      if (pass.length < 4) {
-        showAuthError('Please choose a password of at least 4 characters.');
-        return;
-      }
-      if (pass !== confirmPass) {
-        showAuthError('Passwords do not match.');
-        return;
-      }
-      document.getElementById('signup-confirm').value = '';
-    }
-    clearAuthError();
-    setAuthSession({ mode: 'user', email: email, at: Date.now() });
-    goScreen('home');
-    showToast(authMode === 'signup' ? 'Account Created & Signed In' : 'Login Successful');
-  }
-
-  function continueAsGuest() {
-    clearAuthError();
-    setAuthSession({ mode: 'guest', email: null, at: Date.now() });
-    goScreen('home');
-    showToast('Guest Mode Active');
-  }
-
-  function logoutSession() {
-    safeRemove(AUTH_KEY);
-    updateSessionLabel();
-    goScreen('login');
-    showToast('Signed out');
-  }
-
-  function getHistory() {
-    try { return JSON.parse(safeGet(STORAGE_KEY) || '[]'); }
-    catch (e) { return []; }
-  }
-
-  function saveHistory(list) {
-    safeSet(STORAGE_KEY, JSON.stringify(list));
-  }
-
-  function goScreen(name) {
-    document.querySelectorAll('.screen').forEach(s => s.classList.remove('active'));
-    const target = document.getElementById('screen-' + name);
-    if (target) target.classList.add('active');
-
-    const nav = document.getElementById('bottom-nav');
-    if (name === 'login') {
-      nav.style.display = 'none';
-    } else {
-      nav.style.display = 'grid';
-      document.querySelectorAll('.navBtn').forEach(b => b.classList.remove('active'));
-      const active = document.getElementById('nav-' + name);
-      if (active) active.classList.add('active');
-    }
-    if (name === 'home') updateHome();
-    if (name === 'history') renderHistory();
-  }
-
-  function loadSample(type) {
-    const map = {
-      sms: { ch: 'SMS / Text', txt: '[SF Express] Parcel delivery failed. Pay HK$4.50 fee within 12h: http://sf-hk-pay.top' },
-      bank: { ch: 'WhatsApp / Instant Chat', txt: 'HSBC Alert: Account suspended in 2h unless you verify HKID and OTP at http://bit.ly/hsbc-hk' },
-      safe: { ch: 'SMS / Text', txt: 'Reminder: Dental appointment at Central Clinic tomorrow at 3:00 PM. Call 2555-0199.' }
-    };
-    const item = map[type];
-    if (!item) return;
-    document.getElementById('scan-channel').value = item.ch;
-    document.getElementById('scan-input').value = item.txt;
-    document.getElementById('scan-alert').classList.remove('show');
-  }
-
-  function analyzeText(text, channel) {
-    const t = text.toLowerCase();
-    let score = 12;
-    const reasons = [];
-    if (/http:\/\/|bit\.ly|\.top|\.xyz|\.club|-verify|-pay/.test(t)) {
-      score += 38;
-      reasons.push('Suspicious or unencrypted/shortened URL detected.');
-    }
-    if (/urgent|within \d+h|within \d+ hours|suspended|locked|immediately/.test(t)) {
-      score += 22;
-      reasons.push('High-pressure urgency phrasing detected.');
-    }
-    if (/otp|hkid|password|pin|credit card|pay hk\$|fee|transfer/.test(t)) {
-      score += 25;
-      reasons.push('Requests sensitive credentials (OTP/HKID) or payment.');
-    }
-    if (reasons.length === 0) reasons.push('No high-risk phishing or credential cues detected.');
-    score = Math.min(score, 98);
-
-    let level = 'LOW', title = 'Low Risk — Appears Routine', actions = ['Verify sender independently if unexpected.', 'Never share OTP codes.'];
-    if (score >= 65) {
-      level = 'HIGH';
-      title = 'High Risk — Likely Phishing / Impersonation Scam';
-      actions = ['Do NOT click links or enter HKID/OTP/card info.', 'Verify via official channel or HK Anti-Scam Helpline 18222.', 'Block and delete message.'];
-    } else if (score >= 35) {
-      level = 'MED';
-      title = 'Medium Risk — Proceed with Caution';
-      actions = ['Check official website or listed hotline directly.', 'Avoid clicking embedded links.'];
-    }
-
-    return {
-      id: Date.now(),
-      time: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
-      channel,
-      fullText: text,
-      snippet: text.slice(0, 85) + (text.length > 85 ? '...' : ''),
-      score,
-      level,
-      title,
-      reasons,
-      actions
-    };
-  }
-
-  function runAnalysis() {
-    const alertBox = document.getElementById('scan-alert');
-    const txt = (document.getElementById('scan-input').value || '').trim();
-    const ch = document.getElementById('scan-channel').value;
-    if (!txt) {
-      alertBox.textContent = 'Please enter a message or choose a sample first.';
-      alertBox.classList.add('show');
-      return;
-    }
-    alertBox.classList.remove('show');
-    const res = analyzeText(txt, ch);
-    const list = getHistory();
-    list.unshift(res);
-    saveHistory(list);
-    renderResult(res);
-    goScreen('result');
-    showToast('Scan saved to History');
-  }
-
-  function renderResult(res) {
-    const badge = document.getElementById('res-badge');
-    badge.className = 'badge ' + (res.level === 'HIGH' ? 'badge-high' : res.level === 'MED' ? 'badge-med' : 'badge-low');
-    badge.textContent = res.level + ' RISK';
-    document.getElementById('res-score').textContent = 'Risk Score: ' + res.score + '/100';
-    document.getElementById('res-title').textContent = res.title;
-    document.getElementById('res-meta').textContent = res.channel + ' • ' + res.time;
-    document.getElementById('res-original').textContent = res.fullText;
-    document.getElementById('res-reasons').innerHTML = res.reasons.map(r => '<li>' + escapeHtml(r) + '</li>').join('');
-    document.getElementById('res-actions').innerHTML = res.actions.map(a => '<li>' + escapeHtml(a) + '</li>').join('');
-  }
-
-  function updateHome() {
-    updateSessionLabel();
-    const list = getHistory();
-    document.getElementById('stat-total').textContent = String(list.length);
-    document.getElementById('stat-high').textContent = String(list.filter(x => x.level === 'HIGH').length);
-    const recent = document.getElementById('recent-scans-list');
-    if (list.length === 0) {
-      recent.innerHTML = '<div class="tiny muted">No recent scans yet.</div>';
-    } else {
-      recent.innerHTML = list.slice(0, 2).map(x =>
-        '<div class="recentCard" onclick="openRecord(' + x.id + ')"><div class="rowBetween"><span class="badge ' +
-        (x.level === 'HIGH' ? 'badge-high' : x.level === 'MED' ? 'badge-med' : 'badge-low') + '">' + escapeHtml(x.level) +
-        '</span><span class="tiny muted">' + escapeHtml(x.time) + '</span></div><div class="tiny" style="margin-top:5px;">' + escapeHtml(x.snippet) + '</div></div>'
-      ).join('');
-    }
-  }
-
-  function renderHistory() {
-    const container = document.getElementById('history-list');
-    const q = ((document.getElementById('history-search') && document.getElementById('history-search').value) || '').trim().toLowerCase();
-    const list = getHistory().filter(x => !q ||
-      String(x.title || '').toLowerCase().includes(q) ||
-      String(x.channel || '').toLowerCase().includes(q) ||
-      String(x.fullText || '').toLowerCase().includes(q) ||
-      String(x.level || '').toLowerCase().includes(q)
-    );
-    if (list.length === 0) {
-      container.innerHTML = '<div class="tiny muted">No matching scan history.</div>';
-      return;
-    }
-    container.innerHTML = list.map(x =>
-      '<div class="recentCard" onclick="openRecord(' + x.id + ')"><div class="rowBetween"><span class="badge ' +
-      (x.level === 'HIGH' ? 'badge-high' : x.level === 'MED' ? 'badge-med' : 'badge-low') + '">' + escapeHtml(x.level) + ' (' + escapeHtml(x.score) +
-      ')</span><span class="tiny muted">' + escapeHtml(x.time) + '</span></div><div class="small" style="font-weight:700;margin-top:5px;">' + escapeHtml(x.title) +
-      '</div><div class="tiny muted" style="margin-top:3px;">' + escapeHtml(x.snippet) + '</div></div>'
-    ).join('');
-  }
-
-  function openRecord(id) {
-    const found = getHistory().find(x => x.id === id);
-    if (found) {
-      renderResult(found);
-      goScreen('result');
-    }
-  }
-
-  function exportHistoryJson() {
-    const data = JSON.stringify(getHistory(), null, 2);
-    const blob = new Blob([data], { type: 'application/json' });
-    const url = URL.createObjectURL(blob);
-    const a = document.createElement('a');
-    a.href = url;
-    a.download = 'scamlens-history.json';
-    a.click();
-    URL.revokeObjectURL(url);
-    showToast('Exported scan history');
-  }
-
-  function clearHistory() {
-    saveHistory([]);
-    renderHistory();
-    updateHome();
-    showToast('History cleared');
-  }
-
-  updateSessionLabel();
-  if (getAuthSession()) {
-    goScreen('home');
-  } else {
-    goScreen('login');
-  }
-</script>
-</body>
-</html>
+    .heroCard{
+      background:
+        radial-gradient(115% 95% at 95% 0%, rgba(16, 185, 129, 0.18), transparent 56%),
+        linear-gradient(180deg, rgba(25, 40, 66, 0.96), rgba(14, 23, 40, 0.
