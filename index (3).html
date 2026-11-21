@@ -1,0 +1,1914 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>ScamLens — AI Anti-Scam Assistant</title>
+  <style>
+    /* Theme tokens & visual palette for the commercial-grade ScamLens prototype */
+    :root{
+      --bg: #070d19;
+      --bg-elevated: #0f172a;
+      --panel: rgba(22, 33, 54, 0.86);
+      --panel-solid: #162136;
+      --panel-inner: rgba(10, 17, 32, 0.78);
+      --emerald: #10b981;
+      --emerald-bright: #34d399;
+      --emerald-deep: #059669;
+      --cyan: #38bdf8;
+      --danger: #ef4444;
+      --danger-bright: #fca5a5;
+      --warn: #f59e0b;
+      --warn-bright: #fcd34d;
+      --text: #f8fafc;
+      --text-soft: #cbd5e1;
+      --muted: #94a3b8;
+      --line: rgba(52, 211, 153, 0.22);
+      --line-subtle: rgba(148, 163, 184, 0.16);
+      --glow: 0 0 28px rgba(16, 185, 129, 0.16), 0 20px 48px rgba(2, 6, 23, 0.72);
+      --card-shadow: 0 8px 24px rgba(2, 6, 23, 0.36);
+      --risk-low-bg: rgba(16, 185, 129, 0.16);
+      --risk-low: #34d399;
+      --risk-med-bg: rgba(245, 158, 11, 0.16);
+      --risk-med: #fbbf24;
+      --risk-high-bg: rgba(239, 68, 68, 0.16);
+      --risk-high: #f87171;
+    }
+
+    *{ box-sizing:border-box; }
+    html,body{ height:100%; }
+    body{
+      margin:0;
+      font-family: ui-sans-serif, system-ui, -apple-system, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+      background:
+        radial-gradient(960px 540px at 50% -10%, rgba(16, 185, 129, 0.18), transparent 60%),
+        radial-gradient(760px 440px at 8% 32%, rgba(56, 189, 248, 0.10), transparent 62%),
+        radial-gradient(640px 420px at 92% 78%, rgba(16, 185, 129, 0.08), transparent 60%),
+        var(--bg);
+      color: var(--text);
+      -webkit-font-smoothing: antialiased;
+    }
+
+    /* Outer desktop framing & inner mobile-first viewport container */
+    .shell{
+      min-height:100%;
+      display:flex;
+      align-items:center;
+      justify-content:center;
+      padding:16px 12px 22px;
+    }
+    .phone{
+      width:100%;
+      max-width: 430px;
+      height: 86dvh;
+      max-height: 880px;
+      background: linear-gradient(180deg, rgba(13, 21, 38, 0.96) 0%, rgba(8, 14, 27, 0.99) 100%);
+      border: 1px solid rgba(52, 211, 153, 0.28);
+      border-radius: 22px;
+      box-shadow: var(--glow);
+      overflow:hidden;
+      position:relative;
+      display:flex;
+      flex-direction:column;
+    }
+    @media (max-width: 440px){
+      .shell{ padding: 0; }
+      .phone{ border-radius: 0; height: 100dvh; max-height: none; border-left: none; border-right: none; }
+    }
+    @media (max-width: 380px){
+      .scanActionRow{ flex-direction: column; }
+      .scanActionRow .btn{ width: 100% !important; }
+    }
+
+    /* Top app bar with custom ScamLens shield-lens vector mark */
+    header.appbar{
+      padding: 13px 16px 12px;
+      border-bottom: 1px solid var(--line);
+      background: linear-gradient(180deg, rgba(15, 23, 42, 0.96), rgba(11, 18, 34, 0.90));
+      backdrop-filter: blur(12px);
+      flex: 0 0 auto;
+      z-index: 5;
+    }
+    .brandRow{ display:flex; align-items:center; justify-content:space-between; gap:12px; }
+    .brandTitle{ display:flex; align-items:center; gap:11px; }
+
+    .brandIcon{
+      width: 40px;
+      height: 40px;
+      border-radius: 13px;
+      background: linear-gradient(145deg, rgba(16, 185, 129, 0.24), rgba(6, 78, 59, 0.55));
+      border: 1px solid rgba(52, 211, 153, 0.52);
+      box-shadow: 0 0 18px rgba(16, 185, 129, 0.28), inset 0 1px 0 rgba(255, 255, 255, 0.16);
+      display: grid;
+      place-items: center;
+      flex: 0 0 auto;
+      position: relative;
+    }
+    .brandIcon svg{
+      width: 26px;
+      height: 26px;
+      display: block;
+    }
+    .brandIconLg{
+      width: 64px;
+      height: 64px;
+      border-radius: 18px;
+      box-shadow: 0 0 26px rgba(16, 185, 129, 0.34), inset 0 1px 0 rgba(255, 255, 255, 0.22);
+    }
+    .brandIconLg svg{
+      width: 42px;
+      height: 42px;
+    }
+
+    .brandText h1{
+      font-size: 17px;
+      font-weight: 800;
+      letter-spacing: -0.02em;
+      margin:0;
+      line-height: 1.15;
+      display:flex;
+      align-items:center;
+      gap:4px;
+    }
+    .brandText h1 .accent{ color: var(--emerald-bright); }
+    .brandText .sub{
+      margin-top: 2px;
+      font-size: 11.5px;
+      color: var(--muted);
+      letter-spacing: 0.01em;
+    }
+    .statusPill{
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      font-size: 11px;
+      color: var(--emerald-bright);
+      background: rgba(16, 185, 129, 0.14);
+      border: 1px solid rgba(52, 211, 153, 0.38);
+      padding: 5px 10px;
+      border-radius: 999px;
+      font-weight: 700;
+      white-space: nowrap;
+    }
+    .pulseDot{
+      width: 7px;
+      height: 7px;
+      border-radius: 999px;
+      background: var(--emerald-bright);
+      box-shadow: 0 0 8px var(--emerald-bright);
+    }
+
+    /* Scrollable main view area with subtle dark scrollbar & bottom clearance */
+    main{
+      padding: 16px 15px 104px;
+      flex: 1 1 auto;
+      min-height: 0;
+      overflow-y: auto;
+      scroll-behavior: smooth;
+      display:flex;
+      flex-direction:column;
+      scrollbar-width: thin;
+      scrollbar-color: rgba(52, 211, 153, 0.24) transparent;
+    }
+    main::-webkit-scrollbar{
+      width: 5px;
+    }
+    main::-webkit-scrollbar-track{
+      background: transparent;
+    }
+    main::-webkit-scrollbar-thumb{
+      background: rgba(52, 211, 153, 0.24);
+      border-radius: 999px;
+    }
+    main::-webkit-scrollbar-thumb:hover{
+      background: rgba(52, 211, 153, 0.42);
+    }
+    .screen{ display:none; flex-direction:column; gap:16px; animation: fadeInScreen .18s ease; }
+    .screen.active{ display:flex; }
+    @keyframes fadeInScreen{
+      from{ opacity: 0.65; transform: translateY(3px); }
+      to{ opacity: 1; transform: translateY(0); }
+    }
+    #screen-login.active{
+      flex:1;
+      justify-content:center;
+      min-height: 100%;
+    }
+
+    /* Elevated card surfaces (fintech & security utility rhythm) */
+    .card{
+      background: linear-gradient(180deg, rgba(23, 35, 58, 0.92), rgba(15, 24, 42, 0.95));
+      border: 1px solid rgba(148, 163, 184, 0.14);
+      box-shadow: var(--card-shadow);
+      border-radius: 18px;
+      padding: 16px;
+    }
+    .sectionCard{
+      background: rgba(16, 26, 46, 0.78);
+      border: 1px solid rgba(148, 163, 184, 0.12);
+      border-radius: 16px;
+      padding: 14px 15px;
+      box-shadow: 0 4px 16px rgba(2, 6, 23, 0.24);
+    }
+    .sessionPill{
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      font-size: 11px;
+      color: var(--text-soft);
+      background: rgba(10, 17, 32, 0.72);
+      border: 1px solid rgba(148, 163, 184, 0.18);
+      padding: 4px 9px;
+      border-radius: 999px;
+      margin-top: 6px;
+      max-width: 100%;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      white-space: nowrap;
+    }
+    .presetsPanel{
+      display: none;
+      flex-direction: column;
+      gap: 9px;
+      padding-top: 10px;
+      margin-top: 2px;
+      border-top: 1px solid rgba(148, 163, 184, 0.12);
+    }
+    .presetsPanel.open{
+      display: flex;
+    }
+    .subMetaLine{
+      font-size: 11px;
+      color: var(--muted);
+      margin-top: 2px;
+    }
+    .heroCard{
+      background:
+        radial-gradient(115% 95% at 95% 0%, rgba(16, 185, 129, 0.18), transparent 56%),
+        linear-gradient(180deg, rgba(25, 40, 66, 0.96), rgba(14, 23, 40, 0.98));
+      border: 1px solid rgba(52, 211, 153, 0.34);
+    }
+    .sectionTag{
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      font-size: 11px;
+      font-weight: 700;
+      letter-spacing: 0.04em;
+      text-transform: uppercase;
+      color: var(--emerald-bright);
+    }
+
+    .quoteBox{
+      background: var(--panel-inner);
+      border: 1px solid var(--line);
+      border-radius: 12px;
+      padding: 11px 12px;
+      font-size: 13px;
+      line-height: 1.5;
+      color: var(--text-soft);
+      word-break: break-word;
+    }
+
+    /* Dedicated Analyzing state card */
+    .analyzingCard{
+      align-items: center;
+      text-align: center;
+      padding: 28px 18px;
+      gap: 14px;
+      border-color: rgba(52, 211, 153, 0.34);
+    }
+    .scannerVisual{
+      position: relative;
+      width: 68px;
+      height: 68px;
+      display: grid;
+      place-items: center;
+    }
+    .spinnerRing{
+      position: absolute;
+      inset: 0;
+      border-radius: 999px;
+      border: 3.5px solid rgba(16, 185, 129, 0.16);
+      border-top-color: var(--emerald-bright);
+      border-right-color: var(--cyan);
+      animation: spinSlow .85s linear infinite;
+    }
+    @keyframes spinSlow{
+      to{ transform: rotate(360deg); }
+    }
+    .analyzingSteps{
+      width: 100%;
+      background: var(--panel-inner);
+      border: 1px solid var(--line);
+      border-radius: 12px;
+      padding: 12px 13px;
+      text-align: left;
+      font-size: 12px;
+      color: var(--text-soft);
+      line-height: 1.7;
+    }
+
+    .stack{ display:flex; flex-direction:column; gap: 10px; }
+    .row{ display:flex; gap: 8px; align-items:center; }
+    .rowBetween{ display:flex; gap:10px; align-items:center; justify-content:space-between; }
+    .muted{ color: var(--muted); }
+    .tiny{ font-size: 12px; }
+    .small{ font-size: 13px; }
+    .title{ font-size: 14px; font-weight: 800; margin:0 0 6px 0; letter-spacing: -0.01em; }
+    .h2{ font-size: 18px; font-weight: 800; margin:0; letter-spacing: -0.015em; }
+    .divider{ height:1px; background: var(--line-subtle); margin: 10px 0; }
+
+    /* In-app status banners (replaces native browser alerts) */
+    .alertBanner{
+      border-radius: 12px;
+      padding: 10px 12px;
+      font-size: 12px;
+      font-weight: 600;
+      line-height: 1.45;
+      display: none;
+      align-items: flex-start;
+      justify-content: space-between;
+      gap: 10px;
+    }
+    .alertBanner.show{ display: flex; }
+    .alertError{
+      color: var(--danger-bright);
+      background: rgba(239, 68, 68, 0.14);
+      border: 1px solid rgba(239, 68, 68, 0.45);
+    }
+    .alertWarn{
+      color: var(--warn-bright);
+      background: rgba(245, 158, 11, 0.14);
+      border: 1px solid rgba(245, 158, 11, 0.45);
+    }
+    .alertActionRow{
+      display: flex;
+      gap: 6px;
+      margin-top: 8px;
+    }
+    .authModeBar{
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 6px;
+      padding: 4px;
+      border-radius: 12px;
+      background: rgba(9, 15, 28, 0.85);
+      border: 1px solid var(--line-subtle);
+    }
+    .authModeBtn{
+      border: none;
+      background: transparent;
+      color: var(--muted);
+      font-size: 12px;
+      font-weight: 700;
+      padding: 8px 10px;
+      border-radius: 9px;
+      cursor: pointer;
+      transition: all .15s ease;
+    }
+    .authModeBtn.active{
+      background: rgba(16, 185, 129, 0.18);
+      color: var(--emerald-bright);
+      border: 1px solid rgba(52, 211, 153, 0.35);
+    }
+    .authHintBox{
+      font-size: 11.5px;
+      color: var(--muted);
+      background: rgba(10, 17, 32, 0.65);
+      border: 1px solid rgba(148, 163, 184, 0.14);
+      border-radius: 11px;
+      padding: 8px 10px;
+      line-height: 1.45;
+    }
+
+    /* Touch-friendly buttons */
+    .btn{
+      border:1px solid rgba(52, 211, 153, 0.28);
+      background: rgba(16, 185, 129, 0.10);
+      color: var(--text);
+      padding: 11px 13px;
+      border-radius: 12px;
+      font-weight: 700;
+      cursor:pointer;
+      width:100%;
+      display:inline-flex;
+      align-items:center;
+      justify-content:center;
+      gap:7px;
+      min-height: 44px;
+      font-size: 13px;
+      transition: background .16s ease, border-color .16s ease, transform .1s ease, box-shadow .16s ease;
+    }
+    .btn:hover:not(:disabled){
+      border-color: rgba(52, 211, 153, 0.55);
+      background: rgba(16, 185, 129, 0.18);
+    }
+    .btn:disabled{ opacity:.6; cursor:not-allowed; }
+    .btn:active:not(:disabled){ transform: translateY(1px); }
+    .btnPrimary{
+      background: linear-gradient(135deg, #10b981 0%, #059669 100%);
+      color: #031c14;
+      border-color: rgba(110, 231, 183, 0.75);
+      box-shadow: 0 6px 20px rgba(16, 185, 129, 0.28);
+    }
+    .btnPrimary:hover:not(:disabled){
+      background: linear-gradient(135deg, #34d399 0%, #10b981 100%);
+      box-shadow: 0 8px 24px rgba(16, 185, 129, 0.36);
+    }
+    .btnDanger{
+      background: rgba(239, 68, 68, 0.14);
+      border-color: rgba(239, 68, 68, 0.42);
+      color: var(--danger-bright);
+    }
+    .btnDanger:hover:not(:disabled){
+      background: rgba(239, 68, 68, 0.22);
+      border-color: rgba(239, 68, 68, 0.65);
+    }
+    .btnGhost{
+      background: rgba(15, 23, 42, 0.55);
+      border-color: var(--line-subtle);
+      color: var(--text-soft);
+    }
+    .btnInline{ width:auto; padding: 7px 11px; border-radius: 10px; min-height: 36px; font-size:12px; }
+
+    /* Quick scenario cards on Home */
+    .presetCard{
+      background: var(--panel-inner);
+      border: 1px solid var(--line-subtle);
+      border-radius: 12px;
+      padding: 11px 12px;
+      color: var(--text);
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 10px;
+      text-align: left;
+      width: 100%;
+      min-height: 48px;
+      transition: border-color .16s ease, background .16s ease, transform .1s ease;
+    }
+    .presetCard:hover{
+      border-color: rgba(52, 211, 153, 0.48);
+      background: rgba(16, 185, 129, 0.10);
+    }
+    .presetCard:active{ transform: translateY(1px); }
+
+    label.fieldLabel{
+      display:block;
+      font-size:12px;
+      font-weight:700;
+      color:var(--text-soft);
+      margin-bottom:5px;
+    }
+    .searchInputWrap{
+      position: relative;
+      display: flex;
+      align-items: center;
+      width: 100%;
+    }
+    .searchInputWrap input{
+      padding-right: 36px;
+    }
+    .searchClearBtn{
+      position: absolute;
+      right: 8px;
+      width: 24px;
+      height: 24px;
+      border-radius: 999px;
+      border: none;
+      background: rgba(148, 163, 184, 0.18);
+      color: var(--text-soft);
+      font-size: 12px;
+      font-weight: 800;
+      line-height: 1;
+      cursor: pointer;
+      display: none;
+      align-items: center;
+      justify-content: center;
+      transition: background .15s ease, color .15s ease;
+    }
+    .searchClearBtn:hover{
+      background: rgba(52, 211, 153, 0.24);
+      color: var(--emerald-bright);
+    }
+    .searchClearBtn.visible{
+      display: inline-flex;
+    }
+    textarea, select, input{
+      width:100%;
+      background: rgba(9, 15, 28, 0.92);
+      border: 1px solid rgba(148, 163, 184, 0.26);
+      border-radius: 12px;
+      color: var(--text);
+      padding: 10px 12px;
+      font-family: inherit;
+      font-size: 13px;
+      outline:none;
+      transition: border-color .15s ease, box-shadow .15s ease;
+    }
+    textarea:focus, select:focus, input:focus{
+      border-color: var(--emerald-bright);
+      box-shadow: 0 0 0 3px rgba(16, 185, 129, 0.16);
+    }
+    .charCounter{
+      font-size: 11px;
+      color: var(--muted);
+      text-align: right;
+      margin-top: 4px;
+    }
+    .charCounter.over{ color: var(--danger-bright); font-weight: 700; }
+
+    .chip{
+      padding: 7px 12px;
+      border-radius: 999px;
+      font-size: 12px;
+      font-weight: 600;
+      background: rgba(15, 23, 42, 0.72);
+      border: 1px solid var(--line-subtle);
+      color: var(--text-soft);
+      cursor:pointer;
+      min-height: 33px;
+      transition: all .15s ease;
+    }
+    .chip:hover{ border-color: rgba(52, 211, 153, 0.45); color: var(--text); }
+    .chip.active{
+      background: var(--emerald);
+      color:#031c14;
+      font-weight:800;
+      border-color:var(--emerald-bright);
+      box-shadow: 0 2px 10px rgba(16, 185, 129, 0.25);
+    }
+
+    .badge{
+      padding: 4px 10px;
+      border-radius: 999px;
+      font-size: 11px;
+      font-weight: 800;
+      letter-spacing: 0.03em;
+      display:inline-flex;
+      align-items:center;
+      gap:5px;
+    }
+    .badge-high{ background: var(--risk-high-bg); color: var(--risk-high); border: 1px solid rgba(248, 113, 113, 0.45); }
+    .badge-med{ background: var(--risk-med-bg); color: var(--risk-med); border: 1px solid rgba(251, 191, 36, 0.45); }
+    .badge-low{ background: var(--risk-low-bg); color: var(--risk-low); border: 1px solid rgba(52, 211, 153, 0.45); }
+
+    /* Home KPI metrics & Risk Breakdown Bar */
+    .statGrid{ display:grid; grid-template-columns:1fr 1fr; gap:10px; }
+    .statBox{
+      background: var(--panel-inner);
+      border:1px solid var(--line-subtle);
+      border-radius:13px;
+      padding:11px 12px;
+    }
+    .statNum{ font-size:22px; font-weight:800; color:var(--emerald-bright); margin-top:2px; }
+
+    .riskBreakdownBox{
+      background: var(--panel-inner);
+      border: 1px solid var(--line-subtle);
+      border-radius: 13px;
+      padding: 11px 12px;
+      display: flex;
+      flex-direction: column;
+      gap: 8px;
+    }
+    .riskBarTrack{
+      height: 10px;
+      width: 100%;
+      border-radius: 999px;
+      background: rgba(148, 163, 184, 0.14);
+      overflow: hidden;
+      display: flex;
+    }
+    .riskSegHigh{ height: 100%; width: 0%; background: #ef4444; transition: width .28s ease; }
+    .riskSegMed{ height: 100%; width: 0%; background: #f59e0b; transition: width .28s ease; }
+    .riskSegLow{ height: 100%; width: 0%; background: #10b981; transition: width .28s ease; }
+    .riskLegend{
+      display: flex;
+      justify-content: space-between;
+      gap: 8px;
+      flex-wrap: wrap;
+      font-size: 11px;
+      color: var(--text-soft);
+    }
+    .legendItem{ display: inline-flex; align-items: center; gap: 5px; }
+    .legendDot{ width: 8px; height: 8px; border-radius: 999px; display: inline-block; }
+
+    /* Result Screen score meter, breakdown & visual hierarchy */
+    .resultHero{
+      border-radius: 14px;
+      padding: 13px;
+      background: var(--panel-inner);
+      border: 1px solid var(--line-subtle);
+      display: flex;
+      flex-direction: column;
+      gap: 9px;
+    }
+    .scoreMeterTrack{
+      height: 8px;
+      width: 100%;
+      border-radius: 999px;
+      background: rgba(148, 163, 184, 0.16);
+      overflow: hidden;
+    }
+    .scoreMeterFill{
+      height: 100%;
+      width: 0%;
+      border-radius: 999px;
+      background: var(--emerald);
+      transition: width .3s ease, background .2s ease;
+    }
+    .breakdownBox{
+      background: var(--panel-inner);
+      border: 1px solid var(--line-subtle);
+      border-radius: 12px;
+      padding: 10px 12px;
+      display: flex;
+      flex-direction: column;
+      gap: 8px;
+    }
+    .breakdownToggleBtn{
+      width: 100%;
+      background: transparent;
+      border: none;
+      color: var(--text);
+      padding: 2px 0;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 8px;
+      cursor: pointer;
+      text-align: left;
+      font-family: inherit;
+    }
+    .breakdownToggleBtn:hover .breakdownToggleLabel{
+      color: var(--emerald-bright);
+    }
+    .breakdownToggleLabel{
+      font-size: 13px;
+      font-weight: 800;
+      letter-spacing: -0.01em;
+      transition: color .15s ease;
+    }
+    .breakdownPanel{
+      display: none;
+      flex-direction: column;
+      gap: 7px;
+      padding-top: 6px;
+      border-top: 1px solid var(--line-subtle);
+    }
+    .breakdownPanel.open{
+      display: flex;
+    }
+    .breakdownRow{
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      gap: 8px;
+      font-size: 12px;
+      color: var(--text-soft);
+      padding: 3px 0;
+      border-bottom: 1px dashed rgba(148, 163, 184, 0.12);
+    }
+    .breakdownRow:last-child{
+      border-bottom: none;
+      padding-bottom: 0;
+    }
+    .breakdownVal{
+      font-weight: 800;
+      font-variant-numeric: tabular-nums;
+      white-space: nowrap;
+    }
+    .breakdownNote{
+      font-size: 11px;
+      color: var(--muted);
+      margin-top: 2px;
+      line-height: 1.4;
+    }
+    .actionCallout{
+      background: rgba(16, 185, 129, 0.08);
+      border: 1px solid rgba(52, 211, 153, 0.25);
+      border-radius: 12px;
+      padding: 11px 12px;
+    }
+
+    .recentCard{
+      background: var(--panel-inner);
+      border: 1px solid var(--line-subtle);
+      border-radius: 12px;
+      padding: 10px 12px;
+      cursor: pointer;
+      transition: border-color .15s ease, transform .1s ease;
+    }
+    .recentCard:hover{ border-color: rgba(52, 211, 153, 0.48); }
+    .recentCard:active{ transform: translateY(1px); }
+
+    ul.cleanList{ margin:6px 0 0; padding-left:18px; font-size:13px; line-height:1.55; color:var(--text-soft); }
+    ul.cleanList li + li{ margin-top: 4px; }
+
+    /* Floating back-to-top button anchored cleanly above fixed bottom navigation */
+    .backToTopBtn{
+      position: absolute;
+      right: 14px;
+      bottom: 80px;
+      padding: 8px 13px;
+      border-radius: 999px;
+      border: 1px solid rgba(52, 211, 153, 0.52);
+      background: rgba(13, 21, 38, 0.95);
+      color: var(--emerald-bright);
+      font-size: 12px;
+      font-weight: 800;
+      cursor: pointer;
+      z-index: 12;
+      box-shadow: 0 8px 22px rgba(2, 6, 23, 0.65);
+      display: none;
+      align-items: center;
+      gap: 4px;
+      transition: transform .12s ease, background .15s ease;
+    }
+    .backToTopBtn:hover{ background: rgba(16, 185, 129, 0.22); }
+    .backToTopBtn:active{ transform: translateY(1px); }
+
+    .toastBanner{
+      position:fixed;
+      left:50%;
+      bottom:84px;
+      transform:translateX(-50%);
+      max-width:390px;
+      width:calc(100% - 28px);
+      padding:10px 14px;
+      border-radius:12px;
+      font-size:12px;
+      font-weight:700;
+      z-index:30;
+      background:rgba(15, 23, 42, 0.97);
+      border:1px solid rgba(52, 211, 153, 0.55);
+      color:var(--text);
+      box-shadow:0 12px 28px rgba(2, 6, 23, 0.65);
+      display:none;
+    }
+
+    /* Always-visible bottom navigation bar */
+    nav.bottomNav{
+      position: relative;
+      flex: 0 0 auto;
+      width: 100%;
+      background: rgba(10, 17, 32, 0.98);
+      backdrop-filter: blur(10px);
+      border-top: 1px solid var(--line);
+      display:grid;
+      grid-template-columns: repeat(4, 1fr);
+      padding: 8px 8px;
+      gap: 4px;
+      z-index: 10;
+    }
+    .navBtn{
+      background:none;
+      border:1px solid transparent;
+      color: var(--muted);
+      font-size:11px;
+      font-weight:700;
+      padding:6px 4px;
+      cursor:pointer;
+      display:flex;
+      flex-direction:column;
+      align-items:center;
+      gap:3px;
+      border-radius:11px;
+      min-height: 46px;
+      transition: all .15s ease;
+    }
+    .navBtn:hover{ color: var(--text-soft); }
+    .navBtn.active{
+      color: var(--emerald-bright);
+      background: rgba(16, 185, 129, 0.14);
+      border-color: rgba(52, 211, 153, 0.28);
+    }
+    .navIcon{ font-size:16px; line-height: 1; }
+  </style>
+</head>
+<body>
+<div class="shell">
+  <div class="phone">
+    <!-- Top App Bar with custom ScamLens Shield + Lens SVG emblem -->
+    <header class="appbar">
+      <div class="brandRow">
+        <div class="brandTitle">
+          <div class="brandIcon" aria-hidden="true">
+            <svg viewBox="0 0 48 48" fill="none" xmlns="http://www.w3.org/2000/svg">
+              <defs>
+                <linearGradient id="slShieldGradTop" x1="8" y1="6" x2="40" y2="42" gradientUnits="userSpaceOnUse">
+                  <stop offset="0%" stop-color="#34d399"/>
+                  <stop offset="100%" stop-color="#059669"/>
+                </linearGradient>
+              </defs>
+              <!-- Outer security shield -->
+              <path d="M24 5L39 11.2V22.8C39 32.6 32.6 40.7 24 43.5C15.4 40.7 9 32.6 9 22.8V11.2L24 5Z" fill="url(#slShieldGradTop)" fill-opacity="0.24" stroke="#34d399" stroke-width="2.6" stroke-linejoin="round"/>
+              <!-- Precision AI inspection lens -->
+              <circle cx="23" cy="22.5" r="7.5" fill="#071521" stroke="#6ee7b7" stroke-width="2.5"/>
+              <circle cx="23" cy="22.5" r="2.6" fill="#34d399"/>
+              <path d="M28.6 28.1L33.5 33" stroke="#6ee7b7" stroke-width="2.8" stroke-linecap="round"/>
+            </svg>
+          </div>
+          <div class="brandText">
+            <h1>Scam<span class="accent">Lens</span></h1>
+            <div class="sub">HK AI Anti-Scam Shield</div>
+          </div>
+        </div>
+        <span class="statusPill"><span class="pulseDot"></span>LOCAL GUARD</span>
+      </div>
+    </header>
+
+    <main id="main-scroll">
+      <!-- 0. LOGIN / SIGN UP SCREEN -->
+      <section id="screen-login" class="screen active">
+        <div class="card heroCard stack" style="gap:13px;">
+          <div class="row" style="gap:14px;">
+            <div class="brandIcon brandIconLg" aria-hidden="true">
+              <svg viewBox="0 0 48 48" fill="none" xmlns="http://www.w3.org/2000/svg">
+                <defs>
+                  <linearGradient id="slShieldGradHero" x1="8" y1="6" x2="40" y2="42" gradientUnits="userSpaceOnUse">
+                    <stop offset="0%" stop-color="#6ee7b7"/>
+                    <stop offset="100%" stop-color="#059669"/>
+                  </linearGradient>
+                </defs>
+                <path d="M24 5L39 11.2V22.8C39 32.6 32.6 40.7 24 43.5C15.4 40.7 9 32.6 9 22.8V11.2L24 5Z" fill="url(#slShieldGradHero)" fill-opacity="0.28" stroke="#6ee7b7" stroke-width="2.6" stroke-linejoin="round"/>
+                <circle cx="23" cy="22.5" r="7.5" fill="#06131f" stroke="#a7f3d0" stroke-width="2.5"/>
+                <circle cx="23" cy="22.5" r="2.7" fill="#34d399"/>
+                <path d="M28.6 28.1L33.5 33" stroke="#a7f3d0" stroke-width="2.8" stroke-linecap="round"/>
+              </svg>
+            </div>
+            <div>
+              <span class="sectionTag">Hong Kong Anti-Scam MVP</span>
+              <h2 class="h2" id="auth-heading" style="margin-top:2px;">Welcome to ScamLens</h2>
+              <div class="tiny muted" id="auth-sub" style="margin-top:2px;">Instant phishing, parcel &amp; bank impersonation check</div>
+            </div>
+          </div>
+
+          <div class="authModeBar" role="tablist" aria-label="Authentication mode">
+            <button type="button" class="authModeBtn active" id="tab-signin" role="tab" aria-selected="true" onclick="setAuthMode('signin')">Sign In</button>
+            <button type="button" class="authModeBtn" id="tab-signup" role="tab" aria-selected="false" onclick="setAuthMode('signup')">Sign Up</button>
+          </div>
+
+          <div id="login-error" class="alertBanner alertError" role="alert">
+            <span id="login-error-text">Please enter both email and password, or continue in Guest Mode.</span>
+          </div>
+
+          <div>
+            <label class="fieldLabel" for="login-email">Email</label>
+            <input id="login-email" type="email" placeholder="name@example.com" autocomplete="email" />
+          </div>
+
+          <div>
+            <label class="fieldLabel" for="login-password">Password</label>
+            <input id="login-password" type="password" placeholder="Enter your password" autocomplete="current-password" />
+          </div>
+
+          <div id="signup-confirm-wrap" style="display:none;">
+            <label class="fieldLabel" for="signup-confirm">Confirm Password</label>
+            <input id="signup-confirm" type="password" placeholder="Re-enter your password" autocomplete="new-password" />
+          </div>
+
+          <div class="authHintBox" id="auth-mode-hint">
+            Local prototype auth: any valid email &amp; password works, or create a local account via Sign Up.
+          </div>
+
+          <div class="stack" style="gap:8px;margin-top:2px;">
+            <button class="btn btnPrimary" id="btn-login" onclick="handleAuthSubmit()">Sign In to Dashboard</button>
+            <button class="btn btnGhost" id="btn-guest" onclick="continueAsGuest()">Continue as Guest</button>
+          </div>
+        </div>
+      </section>
+
+      <!-- 1. ONBOARDING SCREEN -->
+      <section id="screen-onboarding" class="screen">
+        <div class="card heroCard stack">
+          <span class="badge badge-low" style="align-self:flex-start;">Privacy-First HK Protection</span>
+          <h2 class="h2">Spot Hong Kong Scams Before You Click or Pay</h2>
+          <p class="small muted" style="margin:0;line-height:1.55;">
+            Paste suspicious SMS, WhatsApp messages, links, or caller details. ScamLens inspects red flags locally in seconds and recommends safe verification steps.
+          </p>
+          <div class="divider"></div>
+          <div class="stack" style="gap:9px;">
+            <div class="small">✓ <strong>Local Risk Engine:</strong> Flags suspicious domains (.top / shortened links), fake SF Express / bank alerts &amp; urgency traps.</div>
+            <div class="small">✓ <strong>HK Action Guidance:</strong> Direct reminders for HK Police Scameter+ and Anti-Scam Helpline <strong>18222</strong>.</div>
+            <div class="small">✓ <strong>Private Local History:</strong> Stored on your browser via <code>localStorage</code> with instant search &amp; risk breakdown.</div>
+          </div>
+          <button class="btn btnPrimary" style="margin-top:6px;" onclick="completeOnboarding()">Start Protecting →</button>
+        </div>
+      </section>
+
+      <!-- 2. HOME SCREEN -->
+      <section id="screen-home" class="screen">
+        <div class="card heroCard stack" style="gap:14px;">
+          <div class="rowBetween" style="align-items:flex-start;">
+            <div style="min-width:0;">
+              <span class="sectionTag">Protection Hub</span>
+              <h2 class="h2" style="margin-top:3px;">Security Summary</h2>
+              <div class="sessionPill" id="session-status">Signed in</div>
+            </div>
+            <div class="row" style="gap:6px;flex-shrink:0;">
+              <button class="btn btnGhost btnInline" onclick="goScreen('onboarding')">Guide</button>
+              <button class="btn btnDanger btnInline" onclick="logoutSession()">Sign Out</button>
+            </div>
+          </div>
+
+          <div class="statGrid">
+            <div class="statBox">
+              <div class="tiny muted">Total Checks</div>
+              <div class="statNum" id="stat-total">0</div>
+            </div>
+            <div class="statBox">
+              <div class="tiny muted">High Risk Caught</div>
+              <div class="statNum" id="stat-high" style="color:var(--risk-high);">0</div>
+            </div>
+          </div>
+
+          <!-- Risk Breakdown Bar (High / Medium / Low distribution from localStorage) -->
+          <div class="riskBreakdownBox" id="risk-breakdown">
+            <div class="rowBetween">
+              <span class="tiny" style="font-weight:700;color:var(--text);">Risk Distribution</span>
+              <span class="tiny muted" id="risk-breakdown-summary">No scans yet</span>
+            </div>
+            <div class="riskBarTrack" role="img" aria-label="High, Medium, and Low risk scan distribution bar">
+              <div class="riskSegHigh" id="bar-high"></div>
+              <div class="riskSegMed" id="bar-med"></div>
+              <div class="riskSegLow" id="bar-low"></div>
+            </div>
+            <div class="riskLegend">
+              <span class="legendItem">
+                <span class="legendDot" style="background:#ef4444;"></span>
+                <span id="legend-high">High: 0 (0%)</span>
+              </span>
+              <span class="legendItem">
+                <span class="legendDot" style="background:#f59e0b;"></span>
+                <span id="legend-med">Med: 0 (0%)</span>
+              </span>
+              <span class="legendItem">
+                <span class="legendDot" style="background:#10b981;"></span>
+                <span id="legend-low">Low: 0 (0%)</span>
+              </span>
+            </div>
+          </div>
+
+          <button class="btn btnPrimary" onclick="goScreen('scan')">+ New Scam Check</button>
+        </div>
+
+        <!-- Dynamic Recent Scans Section -->
+        <div class="sectionCard stack" style="gap:10px;">
+          <div class="rowBetween">
+            <div>
+              <div class="title" style="margin:0;">Recent Scans</div>
+              <div class="subMetaLine">Tap any item to inspect risk details</div>
+            </div>
+            <button class="btn btnGhost btnInline" style="padding:4px 10px;min-height:28px;font-size:11px;" onclick="goScreen('history')">All History</button>
+          </div>
+          <div id="recent-scans-list" class="stack" style="gap:8px;"></div>
+        </div>
+
+        <!-- Collapsible Quick HK Scenarios to keep Home focused -->
+        <div class="sectionCard stack" style="gap:8px;">
+          <button
+            type="button"
+            class="breakdownToggleBtn"
+            id="btn-toggle-presets"
+            aria-expanded="false"
+            aria-controls="home-presets-panel"
+            onclick="togglePresetsPanel()"
+          >
+            <div>
+              <div class="breakdownToggleLabel">Quick Test Scenarios (HK)</div>
+              <div class="subMetaLine">One-tap SMS, bank &amp; safe examples</div>
+            </div>
+            <span class="tiny" id="home-presets-toggle-state" style="color:var(--emerald-bright);font-weight:700;">Expand ▾</span>
+          </button>
+          <div class="presetsPanel" id="home-presets-panel">
+            <button type="button" class="presetCard" onclick="loadPreset('sms')">
+              <div>
+                <div class="small" style="font-weight:700;">📦 Fake SF Express Parcel Fee SMS</div>
+                <div class="tiny muted">Suspicious .top link + HK$4.50 fee trap</div>
+              </div>
+              <span class="tiny" style="color:var(--emerald-bright);font-weight:700;">Try →</span>
+            </button>
+            <button type="button" class="presetCard" onclick="loadPreset('bank')">
+              <div>
+                <div class="small" style="font-weight:700;">🏦 Urgent Bank Account Suspension Link</div>
+                <div class="tiny muted">Shortened URL + HKID / OTP request</div>
+              </div>
+              <span class="tiny" style="color:var(--emerald-bright);font-weight:700;">Try →</span>
+            </button>
+            <button type="button" class="presetCard" onclick="loadPreset('safe')">
+              <div>
+                <div class="small" style="font-weight:700;">✅ Routine Clinic Appointment Reminder</div>
+                <div class="tiny muted">Low-risk baseline message</div>
+              </div>
+              <span class="tiny" style="color:var(--emerald-bright);font-weight:700;">Try →</span>
+            </button>
+          </div>
+        </div>
+      </section>
+
+      <!-- 3. SCAN SCREEN -->
+      <section id="screen-scan" class="screen">
+        <div class="card stack">
+          <div>
+            <span class="sectionTag">Step 1 • Input &amp; Channel</span>
+            <h2 class="h2" style="margin-top:2px;">Analyze Suspicious Content</h2>
+            <div class="tiny muted" style="margin-top:2px;">Select channel and paste text, URL, or caller info</div>
+          </div>
+
+          <!-- In-app validation banner (replaces native browser alert) -->
+          <div id="scan-alert" class="alertBanner alertError" role="alert">
+            <div style="flex:1;">
+              <div id="scan-alert-text"></div>
+              <div id="scan-alert-actions" class="alertActionRow" style="display:none;">
+                <button type="button" class="btn btnPrimary btnInline" onclick="proceedShortScan()">Analyze Anyway</button>
+                <button type="button" class="btn btnGhost btnInline" onclick="hideScanAlert()">Edit Text</button>
+              </div>
+            </div>
+          </div>
+
+          <div>
+            <label class="fieldLabel" for="scan-channel">Communication Channel</label>
+            <select id="scan-channel">
+              <option value="SMS / Text">SMS / Text Message</option>
+              <option value="WhatsApp / WeChat">WhatsApp / Instant Chat</option>
+              <option value="Website / Link">Suspicious Link / URL</option>
+              <option value="Phone Call">Phone Call / Caller ID</option>
+            </select>
+          </div>
+
+          <div>
+            <label class="fieldLabel" for="scan-input">Message or Link Content</label>
+            <textarea id="scan-input" rows="5" oninput="updateCharCounter()" placeholder="Paste message or link here... e.g., [SF Express] Your parcel delivery failed due to incomplete address. Update at http://sf-hk-track.top within 24h."></textarea>
+            <div class="charCounter" id="scan-char-count">0 / 500 chars</div>
+          </div>
+
+          <div class="row" style="flex-wrap:wrap;">
+            <span class="chip" onclick="loadPreset('sms', false)">Sample: Parcel SMS</span>
+            <span class="chip" onclick="loadPreset('bank', false)">Sample: Bank Phishing</span>
+            <span class="chip" onclick="loadPreset('safe', false)">Sample: Safe Text</span>
+          </div>
+
+          <div class="row scanActionRow">
+            <button class="btn btnGhost" style="width:35%;" onclick="clearScanInput()">Clear</button>
+            <button class="btn btnPrimary" id="btn-analyze" style="width:65%;" onclick="runAnalysis()">Analyze Risk</button>
+          </div>
+        </div>
+      </section>
+
+      <!-- 3B. ANALYZING SCREEN -->
+      <section id="screen-analyzing" class="screen">
+        <div class="card heroCard stack analyzingCard">
+          <div class="scannerVisual" aria-hidden="true">
+            <div class="spinnerRing"></div>
+            <div class="brandIcon" style="width:38px;height:38px;border-radius:12px;">
+              <svg viewBox="0 0 48 48" fill="none" xmlns="http://www.w3.org/2000/svg" style="width:24px;height:24px;">
+                <path d="M24 5L39 11.2V22.8C39 32.6 32.6 40.7 24 43.5C15.4 40.7 9 32.6 9 22.8V11.2L24 5Z" fill="#10b981" fill-opacity="0.25" stroke="#34d399" stroke-width="2.6"/>
+                <circle cx="23" cy="22.5" r="7" fill="#06131f" stroke="#6ee7b7" stroke-width="2.4"/>
+                <path d="M28.2 27.7L33 32.5" stroke="#6ee7b7" stroke-width="2.6" stroke-linecap="round"/>
+              </svg>
+            </div>
+          </div>
+          <span class="badge badge-med">LIVE RISK SCAN</span>
+          <h2 class="h2" id="analyzing-title">Analyzing...</h2>
+          <p class="small muted" id="analyzing-sub" style="margin:0;line-height:1.5;">
+            Checking URL patterns, urgency phrasing, and credential requests locally.
+          </p>
+          <div class="quoteBox" id="analyzing-preview" style="width:100%;"></div>
+          <div class="analyzingSteps">
+            <div>• Channel: <strong id="analyzing-channel">SMS / Text</strong></div>
+            <div>• Scanning domains, payment lures &amp; HK impersonation cues...</div>
+          </div>
+        </div>
+      </section>
+
+      <!-- 4. RESULT SCREEN -->
+      <section id="screen-result" class="screen">
+        <div class="card stack" id="result-card">
+          <div class="resultHero">
+            <div class="rowBetween">
+              <span id="res-badge" class="badge badge-high">HIGH RISK</span>
+              <span id="res-score" class="small" style="font-weight:800;">Risk Score: 88/100</span>
+            </div>
+            <div class="scoreMeterTrack" aria-hidden="true">
+              <div class="scoreMeterFill" id="res-score-bar"></div>
+            </div>
+            <h2 class="h2" id="res-title">Likely Phishing / Impersonation Scam</h2>
+            <div class="tiny muted" id="res-meta">Channel: SMS • Just now</div>
+          </div>
+
+          <div class="quoteBox" id="res-original">No message analyzed yet.</div>
+
+          <!-- Score Breakdown (Explainable Rule Scoring, collapsed by default) -->
+          <div class="breakdownBox">
+            <button
+              type="button"
+              class="breakdownToggleBtn"
+              id="btn-toggle-breakdown"
+              aria-expanded="false"
+              aria-controls="res-breakdown-panel"
+              onclick="toggleBreakdownPanel()"
+            >
+              <span class="breakdownToggleLabel">Score Breakdown</span>
+              <span class="tiny" id="res-breakdown-toggle-state" style="color:var(--emerald-bright);font-weight:700;">Show details ▾</span>
+            </button>
+            <div class="breakdownPanel" id="res-breakdown-panel">
+              <div class="rowBetween">
+                <span class="tiny muted">Text rule calculation</span>
+                <span class="tiny muted" id="res-channel-tag">Channel logged</span>
+              </div>
+              <div id="res-breakdown" class="stack" style="gap:4px;"></div>
+              <div class="breakdownNote">
+                Scores are evaluated from text cues (base 12 pts + detected red flags); selected channel is logged for context.
+              </div>
+            </div>
+          </div>
+
+          <div>
+            <div class="title">Detected Red Flags</div>
+            <ul class="cleanList" id="res-reasons"></ul>
+          </div>
+
+          <div class="actionCallout">
+            <div class="title" style="color:var(--emerald-bright);">Recommended Safe Actions</div>
+            <ul class="cleanList" id="res-actions"></ul>
+          </div>
+
+          <div class="row" style="margin-top:4px;">
+            <button class="btn btnGhost" onclick="goScreen('scan')">Check Another</button>
+            <button class="btn btnPrimary" onclick="goScreen('history')">View History</button>
+          </div>
+        </div>
+      </section>
+
+      <!-- 5. HISTORY & ACTIONS SCREEN -->
+      <section id="screen-history" class="screen">
+        <div class="card stack">
+          <div class="rowBetween">
+            <div>
+              <span class="sectionTag">Local Audit Log</span>
+              <h2 class="h2" style="margin-top:2px;">Scan History</h2>
+            </div>
+            <button class="btn btnDanger btnInline" id="btn-clear-all" onclick="requestClearHistory()">Clear All</button>
+          </div>
+
+          <!-- Inline confirmation bar (replaces native browser confirm) -->
+          <div id="history-confirm-bar" class="alertBanner alertWarn" role="alert">
+            <div style="flex:1;">
+              <div>Delete all saved scan records from this device?</div>
+              <div class="alertActionRow">
+                <button type="button" class="btn btnDanger btnInline" onclick="confirmClearHistory()">Yes, Clear All</button>
+                <button type="button" class="btn btnGhost btnInline" onclick="cancelClearHistory()">Cancel</button>
+              </div>
+            </div>
+          </div>
+
+          <div class="searchInputWrap">
+            <input type="text" id="history-search" placeholder="Search keyword, channel, or risk title..." oninput="handleHistorySearchInput()" />
+            <button type="button" class="searchClearBtn" id="btn-clear-search" aria-label="Clear search keyword" title="Clear search" onclick="clearHistorySearch()">✕</button>
+          </div>
+          <div class="row" style="flex-wrap:wrap;">
+            <button class="chip active" id="flt-ALL" onclick="setFilter('ALL')">All</button>
+            <button class="chip" id="flt-HIGH" onclick="setFilter('HIGH')">High</button>
+            <button class="chip" id="flt-MED" onclick="setFilter('MED')">Medium</button>
+            <button class="chip" id="flt-LOW" onclick="setFilter('LOW')">Low</button>
+          </div>
+        </div>
+        <div id="history-list" class="stack"></div>
+      </section>
+    </main>
+
+    <!-- Back-to-top floating button anchored cleanly above the fixed bottom navigation bar -->
+    <button class="backToTopBtn" id="btn-back-to-top" type="button" onclick="scrollToTop()" aria-label="Back to top">
+      ↑ Top
+    </button>
+
+    <div id="toast-banner" class="toastBanner" role="status" aria-live="polite"></div>
+
+    <nav class="bottomNav" id="bottom-nav" style="display:none;">
+      <button class="navBtn active" id="nav-home" onclick="goScreen('home')">
+        <span class="navIcon">🏠</span><span>Home</span>
+      </button>
+      <button class="navBtn" id="nav-scan" onclick="goScreen('scan')">
+        <span class="navIcon">🔍</span><span>Scan</span>
+      </button>
+      <button class="navBtn" id="nav-result" onclick="goScreen('result')">
+        <span class="navIcon">🛡️</span><span>Result</span>
+      </button>
+      <button class="navBtn" id="nav-history" onclick="goScreen('history')">
+        <span class="navIcon">📋</span><span>History</span>
+      </button>
+    </nav>
+  </div>
+</div>
+
+<script>
+  // Storage keys & runtime state
+  const STORAGE_KEY = 'scamlens_history_v1';
+  const AUTH_KEY = 'scamlens_auth_session_v1';
+  let currentFilter = 'ALL';
+  let latestResult = null;
+  let analysisTimer = null;
+  let toastTimer = null;
+  let pendingShortInput = null;
+
+  // HK-focused sample scenarios for quick testing
+  const PRESETS = {
+    sms: {
+      channel: 'SMS / Text',
+      text: '[SF Express] Your parcel HK892104 cannot be delivered due to invalid address. Please update details and pay HK$4.50 redelivery fee within 12 hours: http://sf-express-hk-pay.top'
+    },
+    bank: {
+      channel: 'WhatsApp / Instant Chat',
+      text: 'HSBC Security Alert: Unusual login detected from overseas. Your e-Banking will be suspended in 2 hours unless you verify your HKID and OTP here: http://bit.ly/hsbc-verify-hk'
+    },
+    safe: {
+      channel: 'SMS / Text',
+      text: 'Reminder: Your dental check-up at Central Clinic is scheduled for tomorrow at 3:00 PM. Reply YES to confirm or call 2555-0199.'
+    }
+  };
+
+  // Bottom toast feedback helper
+  function showToast(message, type = 'success') {
+    const toast = document.getElementById('toast-banner');
+    if (!toast) return;
+    toast.textContent = message;
+    if (type === 'error') {
+      toast.style.borderColor = 'rgba(239, 68, 68, 0.65)';
+    } else if (type === 'warn') {
+      toast.style.borderColor = 'rgba(245, 158, 11, 0.65)';
+    } else {
+      toast.style.borderColor = 'rgba(52, 211, 153, 0.65)';
+    }
+    toast.style.display = 'block';
+    clearTimeout(toastTimer);
+    toastTimer = setTimeout(() => {
+      toast.style.display = 'none';
+    }, 2400);
+  }
+
+  // Scroll helpers for long views and back-to-top button visibility
+  function updateBackToTopVisibility() {
+    const mainEl = document.getElementById('main-scroll');
+    const topBtn = document.getElementById('btn-back-to-top');
+    const navEl = document.getElementById('bottom-nav');
+    if (!mainEl || !topBtn) return;
+    const navVisible = navEl && navEl.style.display !== 'none';
+    topBtn.style.display = (navVisible && mainEl.scrollTop > 140) ? 'inline-flex' : 'none';
+  }
+
+  function scrollToTop() {
+    const mainEl = document.getElementById('main-scroll');
+    if (mainEl) {
+      mainEl.scrollTo({ top: 0, behavior: 'smooth' });
+    }
+  }
+
+  // Demo authentication, local account registration & session persistence
+  const USERS_KEY = 'scamlens_demo_users_v1';
+  let authMode = 'signin';
+
+  function getAuthSession() {
+    try { return JSON.parse(localStorage.getItem(AUTH_KEY)) || null; }
+    catch { return null; }
+  }
+
+  function setAuthSession(session) {
+    localStorage.setItem(AUTH_KEY, JSON.stringify(session));
+  }
+
+  function getDemoUsers() {
+    try { return JSON.parse(localStorage.getItem(USERS_KEY)) || {}; }
+    catch { return {}; }
+  }
+
+  function saveDemoUsers(users) {
+    localStorage.setItem(USERS_KEY, JSON.stringify(users));
+  }
+
+  function showAuthError(msg) {
+    const errorBox = document.getElementById('login-error');
+    const errorText = document.getElementById('login-error-text');
+    if (errorText) errorText.textContent = msg;
+    if (errorBox) errorBox.classList.add('show');
+  }
+
+  function clearAuthError() {
+    const errorBox = document.getElementById('login-error');
+    if (errorBox) errorBox.classList.remove('show');
+  }
+
+  function setAuthMode(mode) {
+    authMode = mode === 'signup' ? 'signup' : 'signin';
+    clearAuthError();
+
+    const tabSignIn = document.getElementById('tab-signin');
+    const tabSignUp = document.getElementById('tab-signup');
+    const confirmWrap = document.getElementById('signup-confirm-wrap');
+    const submitBtn = document.getElementById('btn-login');
+    const hintBox = document.getElementById('auth-mode-hint');
+    const heading = document.getElementById('auth-heading');
+
+    if (tabSignIn) {
+      tabSignIn.classList.toggle('active', authMode === 'signin');
+      tabSignIn.setAttribute('aria-selected', authMode === 'signin' ? 'true' : 'false');
+    }
+    if (tabSignUp) {
+      tabSignUp.classList.toggle('active', authMode === 'signup');
+      tabSignUp.setAttribute('aria-selected', authMode === 'signup' ? 'true' : 'false');
+    }
+    if (confirmWrap) {
+      confirmWrap.style.display = authMode === 'signup' ? 'block' : 'none';
+    }
+    if (submitBtn) {
+      submitBtn.textContent = authMode === 'signup' ? 'Create Local Account' : 'Sign In to Dashboard';
+    }
+    if (heading) {
+      heading.textContent = authMode === 'signup' ? 'Create ScamLens Account' : 'Welcome to ScamLens';
+    }
+    if (hintBox) {
+      hintBox.textContent = authMode === 'signup'
+        ? 'Demo registration saves your email locally in browser storage for this session.'
+        : 'Local prototype auth: enter email & password to sign in, or continue in Guest Mode.';
+    }
+  }
+
+  function handleAuthSubmit() {
+    const emailInput = document.getElementById('login-email');
+    const passwordInput = document.getElementById('login-password');
+    const confirmInput = document.getElementById('signup-confirm');
+
+    const email = (emailInput.value || '').trim().toLowerCase();
+    const password = (passwordInput.value || '').trim();
+
+    if (!email || !password) {
+      showAuthError('Please enter both email and password, or continue in Guest Mode.');
+      return;
+    }
+
+    if (authMode === 'signup') {
+      const confirmPass = confirmInput ? (confirmInput.value || '').trim() : '';
+      if (password.length < 4) {
+        showAuthError('Please choose a password of at least 4 characters.');
+        return;
+      }
+      if (password !== confirmPass) {
+        showAuthError('Passwords do not match. Please check and try again.');
+        return;
+      }
+
+      const users = getDemoUsers();
+      users[email] = { email, createdAt: new Date().toISOString() };
+      saveDemoUsers(users);
+
+      clearAuthError();
+      setAuthSession({
+        mode: 'user',
+        email,
+        loggedInAt: new Date().toISOString()
+      });
+      if (confirmInput) confirmInput.value = '';
+      updateSessionLabel();
+      goScreen('home');
+      showToast('Account Created & Signed In', 'success');
+      return;
+    }
+
+    clearAuthError();
+    setAuthSession({
+      mode: 'user',
+      email,
+      loggedInAt: new Date().toISOString()
+    });
+    updateSessionLabel();
+    goScreen('home');
+    showToast('Login Successful', 'success');
+  }
+
+  function continueAsGuest() {
+    const errorBox = document.getElementById('login-error');
+    if (errorBox) errorBox.classList.remove('show');
+    setAuthSession({
+      mode: 'guest',
+      email: null,
+      loggedInAt: new Date().toISOString()
+    });
+    updateSessionLabel();
+    goScreen('home');
+    showToast('Guest Mode Active', 'success');
+  }
+
+  function logoutSession() {
+    localStorage.removeItem(AUTH_KEY);
+    updateSessionLabel();
+    goScreen('login');
+  }
+
+  // LocalStorage read/write helpers for scan history
+  function getHistory() {
+    try { return JSON.parse(localStorage.getItem(STORAGE_KEY)) || []; }
+    catch { return []; }
+  }
+
+  function saveHistory(list) {
+    localStorage.setItem(STORAGE_KEY, JSON.stringify(list));
+  }
+
+  function completeOnboarding() {
+    localStorage.setItem('scamlens_onboarded', '1');
+    goScreen('home');
+  }
+
+  // Screen switcher & active tab sync
+  function goScreen(name) {
+    document.querySelectorAll('.screen').forEach(s => s.classList.remove('active'));
+    document.getElementById('screen-' + name).classList.add('active');
+
+    const nav = document.getElementById('bottom-nav');
+    if (name === 'login' || name === 'onboarding') {
+      nav.style.display = 'none';
+    } else {
+      nav.style.display = 'grid';
+      document.querySelectorAll('.navBtn').forEach(b => b.classList.remove('active'));
+      const navKey = name === 'analyzing' ? 'scan' : name;
+      const activeBtn = document.getElementById('nav-' + navKey);
+      if (activeBtn) activeBtn.classList.add('active');
+    }
+
+    const mainEl = document.getElementById('main-scroll');
+    if (mainEl) mainEl.scrollTop = 0;
+
+    if (name === 'home') {
+      setPresetsExpanded(false);
+      updateStats();
+    }
+    if (name === 'scan') updateCharCounter();
+    if (name === 'history') {
+      cancelClearHistory();
+      renderHistory();
+    }
+    updateBackToTopVisibility();
+  }
+
+  function loadPreset(key, autoSwitch = true) {
+    const p = PRESETS[key];
+    document.getElementById('scan-channel').value = p.channel;
+    document.getElementById('scan-input').value = p.text;
+    hideScanAlert();
+    updateCharCounter();
+    if (autoSwitch) {
+      goScreen('scan');
+    } else {
+      showToast('Sample loaded into analyzer', 'success');
+    }
+  }
+
+  // Scan input helpers & inline validation banners
+  function updateCharCounter() {
+    const inputEl = document.getElementById('scan-input');
+    const counterEl = document.getElementById('scan-char-count');
+    if (!inputEl || !counterEl) return;
+    const len = inputEl.value.trim().length;
+    counterEl.textContent = `${len} / 500 chars`;
+    counterEl.classList.toggle('over', len > 500);
+  }
+
+  function showScanAlert(message, type = 'error', withShortActions = false) {
+    const box = document.getElementById('scan-alert');
+    const textEl = document.getElementById('scan-alert-text');
+    const actionsEl = document.getElementById('scan-alert-actions');
+    if (!box || !textEl) return;
+
+    box.className = 'alertBanner show ' + (type === 'warn' ? 'alertWarn' : 'alertError');
+    textEl.textContent = message;
+    if (actionsEl) {
+      actionsEl.style.display = withShortActions ? 'flex' : 'none';
+    }
+  }
+
+  function hideScanAlert() {
+    const box = document.getElementById('scan-alert');
+    if (box) box.classList.remove('show');
+    pendingShortInput = null;
+  }
+
+  function clearScanInput() {
+    document.getElementById('scan-input').value = '';
+    hideScanAlert();
+    updateCharCounter();
+  }
+
+  // Rule-based risk scoring engine with explainable breakdown for HK scam patterns
+  function analyzeText(text, channel) {
+    const t = text.toLowerCase();
+    let score = 12;
+    const reasons = [];
+
+    const urlHit = /http:\/\/|bit\.ly|\.top|\.xyz|\.club|-verify|-pay/.test(t);
+    const urgencyHit = /urgent|within \d+ hours|suspended|locked|immediately|last warning/.test(t);
+    const credHit = /otp|hkid|password|pin|credit card|pay hk\$|fee|transfer|fps/.test(t);
+    const brandKeywordHit = /sf express|hsbc|boc|gov|ird|police|customs|parcel/.test(t);
+
+    if (urlHit) {
+      score += 38;
+      reasons.push('Contains suspicious or non-official URL domain (.top / shortened / unencrypted http).');
+    }
+    if (urgencyHit) {
+      score += 22;
+      reasons.push('Uses high-pressure urgency language to rush you into acting without thinking.');
+    }
+    if (credHit) {
+      score += 25;
+      reasons.push('Requests sensitive credentials (OTP/HKID) or unexpected small payment.');
+    }
+
+    const brandHit = brandKeywordHit && score > 30;
+    if (brandHit) {
+      reasons.push('Impersonates a trusted Hong Kong courier, bank, or public institution.');
+    }
+
+    if (reasons.length === 0) {
+      reasons.push('No high-risk phishing links, credential harvesting, or payment traps detected.');
+    }
+
+    score = Math.min(score, 98);
+    const breakdown = [
+      { label: 'Base Baseline Score', pts: 12, hit: true, note: '+12 pts' },
+      { label: 'Suspicious URL / Domain', pts: urlHit ? 38 : 0, hit: urlHit, note: urlHit ? '+38 pts' : '0 pts' },
+      { label: 'High-Pressure Urgency', pts: urgencyHit ? 22 : 0, hit: urgencyHit, note: urgencyHit ? '+22 pts' : '0 pts' },
+      { label: 'OTP / HKID / Payment Lure', pts: credHit ? 25 : 0, hit: credHit, note: credHit ? '+25 pts' : '0 pts' },
+      { label: 'HK Brand / Gov Impersonation', pts: 0, hit: brandHit, note: brandHit ? 'Flagged' : 'None' }
+    ];
+
+    let level = 'LOW', title = 'Low Risk — Appears Routine', actions = [
+      'Still verify sender identity independently if unexpected.',
+      'Never share one-time passwords (OTP) with anyone.'
+    ];
+
+    if (score >= 65) {
+      level = 'HIGH';
+      title = 'High Risk — Likely Phishing / Impersonation Scam';
+      actions = [
+        'Do NOT click any links or enter HKID / bank / card details.',
+        'Verify via official app or HK Police Scameter+ / Anti-Scam Helpline 18222.',
+        'Block the sender and delete the message immediately.'
+      ];
+    } else if (score >= 35) {
+      level = 'MED';
+      title = 'Medium Risk — Proceed with Caution';
+      actions = [
+        'Check the official website or call the organization’s listed hotline.',
+        'Avoid clicking embedded links directly from the message.'
+      ];
+    }
+
+    return {
+      id: Date.now(),
+      time: new Date().toLocaleString([], { month:'short', day:'numeric', hour:'2-digit', minute:'2-digit' }),
+      channel,
+      snippet: text.slice(0, 90) + (text.length > 90 ? '...' : ''),
+      fullText: text,
+      score,
+      level,
+      title,
+      breakdown,
+      reasons,
+      actions
+    };
+  }
+
+  function startScanSequence(input, channel) {
+    hideScanAlert();
+    if (analysisTimer) {
+      clearTimeout(analysisTimer);
+      analysisTimer = null;
+    }
+
+    const btn = document.getElementById('btn-analyze');
+    btn.disabled = true;
+
+    document.getElementById('analyzing-title').textContent = 'Analyzing...';
+    document.getElementById('analyzing-channel').textContent = channel;
+    document.getElementById('analyzing-preview').textContent = input;
+    goScreen('analyzing');
+
+    analysisTimer = setTimeout(() => {
+      const res = analyzeText(input, channel);
+      latestResult = res;
+
+      const list = getHistory();
+      list.unshift(res);
+      saveHistory(list);
+
+      renderResult(res);
+      btn.disabled = false;
+      goScreen('result');
+      showToast('Scan complete & saved to History', 'success');
+      analysisTimer = null;
+    }, 1000);
+  }
+
+  function proceedShortScan() {
+    if (!pendingShortInput) return;
+    const { input, channel } = pendingShortInput;
+    startScanSequence(input, channel);
+  }
+
+  // Scan execution with in-app validation & 1,000ms dedicated analyzing screen
+  function runAnalysis() {
+    const rawText = document.getElementById('scan-input').value;
+    const input = rawText.trim();
+    const channel = document.getElementById('scan-channel').value;
+
+    if (!input) {
+      showScanAlert('Please paste a message or select one of the sample chips first.', 'error', false);
+      return;
+    }
+
+    if (input.length > 500) {
+      showScanAlert('Message is too long (maximum 500 characters). Please shorten the text.', 'error', false);
+      return;
+    }
+
+    if (input.length < 5) {
+      pendingShortInput = { input, channel };
+      showScanAlert('Input is very short (under 5 characters) and may have limited context.', 'warn', true);
+      return;
+    }
+
+    startScanSequence(input, channel);
+  }
+
+  function setBreakdownExpanded(expanded) {
+    const panel = document.getElementById('res-breakdown-panel');
+    const btn = document.getElementById('btn-toggle-breakdown');
+    const stateLabel = document.getElementById('res-breakdown-toggle-state');
+    if (!panel || !btn) return;
+    panel.classList.toggle('open', expanded);
+    btn.setAttribute('aria-expanded', expanded ? 'true' : 'false');
+    if (stateLabel) {
+      stateLabel.textContent = expanded ? 'Hide details ▴' : 'Show details ▾';
+    }
+  }
+
+  function toggleBreakdownPanel() {
+    const panel = document.getElementById('res-breakdown-panel');
+    if (!panel) return;
+    const nextState = !panel.classList.contains('open');
+    setBreakdownExpanded(nextState);
+  }
+
+  function setPresetsExpanded(expanded) {
+    const panel = document.getElementById('home-presets-panel');
+    const btn = document.getElementById('btn-toggle-presets');
+    const stateLabel = document.getElementById('home-presets-toggle-state');
+    if (!panel || !btn) return;
+    panel.classList.toggle('open', expanded);
+    btn.setAttribute('aria-expanded', expanded ? 'true' : 'false');
+    if (stateLabel) {
+      stateLabel.textContent = expanded ? 'Collapse ▴' : 'Expand ▾';
+    }
+  }
+
+  function togglePresetsPanel() {
+    const panel = document.getElementById('home-presets-panel');
+    if (!panel) return;
+    setPresetsExpanded(!panel.classList.contains('open'));
+  }
+
+  function renderResult(res) {
+    setBreakdownExpanded(false);
+    const badge = document.getElementById('res-badge');
+    const scoreBar = document.getElementById('res-score-bar');
+    badge.className = 'badge ' + (res.level === 'HIGH' ? 'badge-high' : res.level === 'MED' ? 'badge-med' : 'badge-low');
+    badge.textContent = res.level + ' RISK';
+
+    if (scoreBar) {
+      scoreBar.style.width = `${res.score}%`;
+      scoreBar.style.background = res.level === 'HIGH' ? '#ef4444' : res.level === 'MED' ? '#f59e0b' : '#10b981';
+    }
+
+    document.getElementById('res-score').textContent = `Risk Score: ${res.score}/100`;
+    document.getElementById('res-title').textContent = res.title;
+    document.getElementById('res-meta').textContent = `${res.channel} • ${res.time}`;
+    document.getElementById('res-original').textContent = res.fullText || res.snippet || '';
+
+    const channelTag = document.getElementById('res-channel-tag');
+    if (channelTag) {
+      channelTag.textContent = res.channel || 'Channel logged';
+    }
+
+    const breakdownEl = document.getElementById('res-breakdown');
+    if (breakdownEl) {
+      const items = Array.isArray(res.breakdown) && res.breakdown.length > 0
+        ? res.breakdown
+        : [{ label: 'Total Calculated Score', pts: res.score, hit: true, note: `${res.score} pts` }];
+
+      breakdownEl.innerHTML = items.map(item => {
+        const valColor = item.hit && item.pts > 12
+          ? 'var(--warn-bright)'
+          : item.hit
+            ? 'var(--emerald-bright)'
+            : 'var(--muted)';
+        return `
+          <div class="breakdownRow">
+            <span>${item.label}</span>
+            <span class="breakdownVal" style="color:${valColor};">${item.note}</span>
+          </div>
+        `;
+      }).join('');
+    }
+
+    document.getElementById('res-reasons').innerHTML = res.reasons.map(r => `<li>${r}</li>`).join('');
+    document.getElementById('res-actions').innerHTML = res.actions.map(a => `<li>${a}</li>`).join('');
+  }
+
+  // Risk distribution bar rendering on Home screen
+  function renderRiskBreakdown(list) {
+    const total = list.length;
+    const highCount = list.filter(x => x.level === 'HIGH').length;
+    const medCount = list.filter(x => x.level === 'MED').length;
+    const lowCount = list.filter(x => x.level === 'LOW').length;
+
+    const highPct = total ? Math.round((highCount / total) * 100) : 0;
+    const medPct = total ? Math.round((medCount / total) * 100) : 0;
+    const lowPct = total ? Math.max(0, 100 - highPct - medPct) : 0;
+
+    const segHigh = document.getElementById('bar-high');
+    const segMed = document.getElementById('bar-med');
+    const segLow = document.getElementById('bar-low');
+    const summaryEl = document.getElementById('risk-breakdown-summary');
+    const legendHigh = document.getElementById('legend-high');
+    const legendMed = document.getElementById('legend-med');
+    const legendLow = document.getElementById('legend-low');
+
+    if (segHigh) segHigh.style.width = total ? `${(highCount / total) * 100}%` : '0%';
+    if (segMed) segMed.style.width = total ? `${(medCount / total) * 100}%` : '0%';
+    if (segLow) segLow.style.width = total ? `${(lowCount / total) * 100}%` : '0%';
+
+    if (summaryEl) {
+      summaryEl.textContent = total ? `${total} scan${total > 1 ? 's' : ''} recorded` : 'No scans yet';
+    }
+    if (legendHigh) legendHigh.textContent = `High: ${highCount} (${highPct}%)`;
+    if (legendMed) legendMed.textContent = `Med: ${medCount} (${medPct}%)`;
+    if (legendLow) legendLow.textContent = `Low: ${lowCount} (${lowPct}%)`;
+  }
+
+  // Dynamic Recent Scans list (latest 2 scans)
+  function renderRecentScans() {
+    const container = document.getElementById('recent-scans-list');
+    if (!container) return;
+
+    const latestTwo = getHistory().slice(0, 2);
+    if (latestTwo.length === 0) {
+      container.innerHTML = `<div class="tiny muted" style="text-align:center;padding:8px 0;">No recent scans yet. Try a quick scenario below!</div>`;
+      return;
+    }
+
+    container.innerHTML = latestTwo.map(item => `
+      <div class="recentCard stack" style="gap:5px;" onclick="viewRecord(${item.id})">
+        <div class="rowBetween">
+          <span class="badge ${item.level === 'HIGH' ? 'badge-high' : item.level === 'MED' ? 'badge-med' : 'badge-low'}">${item.level}</span>
+          <span class="tiny muted">${item.time}</span>
+        </div>
+        <div class="tiny" style="color:var(--text-soft);">${item.snippet}</div>
+      </div>
+    `).join('');
+  }
+
+  function updateStats() {
+    const list = getHistory();
+    document.getElementById('stat-total').textContent = list.length;
+    document.getElementById('stat-high').textContent = list.filter(x => x.level === 'HIGH').length;
+    renderRiskBreakdown(list);
+    updateSessionLabel();
+    renderRecentScans();
+  }
+
+  function setFilter(f) {
+    currentFilter = f;
+    ['ALL','HIGH','MED','LOW'].forEach(k => {
+      document.getElementById('flt-' + k).classList.toggle('active', k === f);
+    });
+    renderHistory();
+  }
+
+  // History filtering, search & item actions
+  function syncSearchClearButton() {
+    const searchEl = document.getElementById('history-search');
+    const clearBtn = document.getElementById('btn-clear-search');
+    if (!searchEl || !clearBtn) return;
+    clearBtn.classList.toggle('visible', searchEl.value.length > 0);
+  }
+
+  function handleHistorySearchInput() {
+    syncSearchClearButton();
+    renderHistory();
+  }
+
+  function clearHistorySearch() {
+    const searchEl = document.getElementById('history-search');
+    if (!searchEl) return;
+    searchEl.value = '';
+    syncSearchClearButton();
+    renderHistory();
+    searchEl.focus();
+  }
+
+  function renderHistory() {
+    syncSearchClearButton();
+    const container = document.getElementById('history-list');
+    const searchEl = document.getElementById('history-search');
+    const keyword = searchEl ? searchEl.value.trim().toLowerCase() : '';
+
+    let list = getHistory();
+    if (currentFilter !== 'ALL') list = list.filter(x => x.level === currentFilter);
+    if (keyword) {
+      list = list.filter(x =>
+        (x.title && x.title.toLowerCase().includes(keyword)) ||
+        (x.fullText && x.fullText.toLowerCase().includes(keyword)) ||
+        (x.snippet && x.snippet.toLowerCase().includes(keyword)) ||
+        (x.channel && x.channel.toLowerCase().includes(keyword))
+      );
+    }
+
+    if (list.length === 0) {
+      container.innerHTML = `<div class="card tiny muted" style="text-align:center;">No records found in this category. Try scanning a message first!</div>`;
+      updateBackToTopVisibility();
+      return;
+    }
+
+    container.innerHTML = list.map(item => `
+      <div class="card stack" style="gap:7px;">
+        <div class="rowBetween">
+          <span class="badge ${item.level === 'HIGH' ? 'badge-high' : item.level === 'MED' ? 'badge-med' : 'badge-low'}">${item.level} (${item.score})</span>
+          <span class="tiny muted">${item.time}</span>
+        </div>
+        <div class="small" style="font-weight:700;">${item.title}</div>
+        <div class="tiny muted">${item.snippet}</div>
+        <div class="row" style="margin-top:4px;">
+          <button class="btn btnGhost btnInline" onclick="viewRecord(${item.id})">View Details</button>
+          <button class="btn btnDanger btnInline" onclick="deleteRecord(${item.id})">Delete</button>
+        </div>
+      </div>
+    `).join('');
+    updateBackToTopVisibility();
+  }
+
+  function viewRecord(id) {
+    const item = getHistory().find(x => x.id === id);
+    if (item) {
+      renderResult(item);
+      goScreen('result');
+    }
+  }
+
+  function deleteRecord(id) {
+    const list = getHistory().filter(x => x.id !== id);
+    saveHistory(list);
+    renderHistory();
+    updateStats();
+    showToast('Record deleted', 'warn');
+  }
+
+  function requestClearHistory() {
+    if (getHistory().length === 0) {
+      showToast('History is already empty', 'warn');
+      return;
+    }
+    const bar = document.getElementById('history-confirm-bar');
+    if (bar) bar.classList.add('show');
+  }
+
+  function cancelClearHistory() {
+    const bar = document.getElementById('history-confirm-bar');
+    if (bar) bar.classList.remove('show');
+  }
+
+  function confirmClearHistory() {
+    saveHistory([]);
+    cancelClearHistory();
+    renderHistory();
+    updateStats();
+    showToast('All scan history cleared', 'warn');
+  }
+
+  // Bind scroll listener for back-to-top button
+  const mainScrollEl = document.getElementById('main-scroll');
+  if (mainScrollEl) {
+    mainScrollEl.addEventListener('scroll', updateBackToTopVisibility, { passive: true });
+  }
+
+  // Initialize on load: show Login screen unless session is saved in localStorage
+  updateSessionLabel();
+  if (getAuthSession()) {
+    goScreen('home');
+  } else {
+    goScreen('login');
+  }
+</script>
+</body>
+</html>
