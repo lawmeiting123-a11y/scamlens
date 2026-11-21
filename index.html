@@ -100,7 +100,7 @@
     .tiny{ font-size:12px; }
     .muted{ color:var(--muted); }
     .stack{ display:flex; flex-direction:column; gap:10px; }
-    .row{ display:flex; gap:8px; align-items:center; }
+    .row{ display:flex; gap:8px; align-items:center; flex-wrap:wrap; }
     .rowBetween{ display:flex; gap:10px; align-items:center; justify-content:space-between; }
     .sessionPill{
       display:inline-flex; align-items:center; font-size:11px; color:var(--text-soft);
@@ -158,7 +158,12 @@
     .badge-med{ background:var(--risk-med-bg); color:var(--risk-med); border:1px solid rgba(251, 191, 36, 0.45); }
     .badge-low{ background:var(--risk-low-bg); color:var(--risk-low); border:1px solid rgba(52, 211, 153, 0.45); }
     .recentCard{ background:var(--panel-inner); border:1px solid var(--line-subtle); border-radius:12px; padding:10px 12px; cursor:pointer; }
+    .recentCard:hover{ border-color:rgba(52, 211, 153, 0.45); }
     ul.cleanList{ margin:6px 0 0; padding-left:18px; font-size:13px; line-height:1.55; color:var(--text-soft); }
+    details.detailBox{
+      background:var(--panel-inner); border:1px solid var(--line-subtle); border-radius:12px; padding:10px 12px;
+    }
+    details.detailBox summary{ cursor:pointer; font-size:12.5px; font-weight:700; color:var(--emerald-bright); }
     .toastBanner{
       position:fixed; left:50%; bottom:84px; transform:translateX(-50%); max-width:390px;
       width:calc(100% - 28px); padding:10px 14px; border-radius:12px; font-size:12px; font-weight:700;
@@ -244,7 +249,7 @@
             <div>
               <span class="sectionTag">Protection Hub</span>
               <h2 class="h2" style="margin-top:3px;">Security Summary</h2>
-              <div class="sessionPill" id="session-status">Signed in</div>
+              <div class="sessionPill" id="session-status">Not signed in</div>
             </div>
             <button type="button" class="btn btnDanger btnInline" onclick="logoutSession()">Sign Out</button>
           </div>
@@ -265,6 +270,14 @@
           <div class="title" style="margin:0;">Recent Scans</div>
           <div id="recent-scans-list" class="stack"></div>
         </div>
+
+        <details class="detailBox">
+          <summary>Prototype &amp; Local Storage Notes</summary>
+          <ul class="cleanList" style="margin-top:8px;">
+            <li>Runs locally in your browser with demo authentication and Guest Mode.</li>
+            <li>Scan records are stored in local browser storage for quick demo testing.</li>
+          </ul>
+        </details>
       </section>
 
       <section id="screen-scan" class="screen">
@@ -296,19 +309,19 @@
       <section id="screen-result" class="screen">
         <div class="card stack">
           <div class="rowBetween">
-            <span id="res-badge" class="badge badge-high">HIGH RISK</span>
-            <span id="res-score" class="small" style="font-weight:800;">Risk Score: 88/100</span>
+            <span id="res-badge" class="badge badge-low">LOW RISK</span>
+            <span id="res-score" class="small" style="font-weight:800;">Risk Score: 12/100</span>
           </div>
-          <h2 class="h2" id="res-title">Result Title</h2>
-          <div class="tiny muted" id="res-meta">Channel • Just now</div>
-          <div class="quoteBox" id="res-original"></div>
+          <h2 class="h2" id="res-title">No Scan Selected Yet</h2>
+          <div class="tiny muted" id="res-meta">Run a scan to inspect risk indicators</div>
+          <div class="quoteBox" id="res-original">No content analyzed yet.</div>
           <div>
             <div class="title">Detected Red Flags</div>
-            <ul class="cleanList" id="res-reasons"></ul>
+            <ul class="cleanList" id="res-reasons"><li>No scan data available yet.</li></ul>
           </div>
           <div>
             <div class="title">Recommended Safe Actions</div>
-            <ul class="cleanList" id="res-actions"></ul>
+            <ul class="cleanList" id="res-actions"><li>Go to Scan tab and test a sample or message.</li></ul>
           </div>
           <button type="button" class="btn btnPrimary" onclick="goScreen('scan')">Check Another</button>
         </div>
@@ -318,7 +331,13 @@
         <div class="card stack">
           <div class="rowBetween">
             <h2 class="h2">Scan History</h2>
-            <button type="button" class="btn btnDanger btnInline" onclick="clearHistory()">Clear</button>
+            <div class="row" style="gap:6px;">
+              <button type="button" class="btn btnGhost btnInline" onclick="exportHistoryJson()">Export</button>
+              <button type="button" class="btn btnDanger btnInline" onclick="clearHistory()">Clear</button>
+            </div>
+          </div>
+          <div>
+            <input id="history-search" type="search" placeholder="Search keyword, channel, or risk..." oninput="renderHistory()" />
           </div>
           <div id="history-list" class="stack"></div>
         </div>
@@ -358,6 +377,12 @@
     catch (e) { delete memoryStore[key]; }
   }
 
+  function escapeHtml(str) {
+    return String(str || '').replace(/[&<>"']/g, ch => ({
+      '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;'
+    }[ch]));
+  }
+
   function showToast(msg) {
     const el = document.getElementById('toast-banner');
     if (!el) return;
@@ -367,17 +392,27 @@
     toastTimer = setTimeout(() => { el.style.display = 'none'; }, 2200);
   }
 
-  function getSession() {
+  function getAuthSession() {
     try { return JSON.parse(safeGet(AUTH_KEY) || 'null'); }
     catch (e) { return null; }
   }
 
+  function setAuthSession(sessionObj) {
+    safeSet(AUTH_KEY, JSON.stringify(sessionObj));
+    updateSessionLabel();
+  }
+
   function updateSessionLabel() {
     const label = document.getElementById('session-status');
-    const s = getSession();
+    const session = getAuthSession();
     if (!label) return;
-    if (!s) { label.textContent = 'Not signed in'; return; }
-    label.textContent = s.mode === 'guest' ? 'Guest Mode • Local Demo' : ('Signed in: ' + s.email);
+    if (!session) {
+      label.textContent = 'Not signed in';
+      return;
+    }
+    label.textContent = session.mode === 'guest'
+      ? 'Guest Mode • Local Demo'
+      : 'Signed in: ' + (session.email || 'Demo User');
   }
 
   function showAuthError(msg) {
@@ -401,6 +436,12 @@
     document.getElementById('btn-login').textContent = authMode === 'signup' ? 'Create Local Account' : 'Sign In to Dashboard';
     const heading = document.getElementById('auth-heading');
     if (heading) heading.textContent = authMode === 'signup' ? 'Create ScamLens Account' : 'Welcome to ScamLens';
+    const hint = document.getElementById('auth-mode-hint');
+    if (hint) {
+      hint.textContent = authMode === 'signup'
+        ? 'Local prototype sign-up: creates a demo session locally without sending data to a remote server.'
+        : 'Local prototype auth: enter email & password to sign in, or continue in Guest Mode.';
+    }
   }
 
   function handleAuthSubmit() {
@@ -423,16 +464,14 @@
       document.getElementById('signup-confirm').value = '';
     }
     clearAuthError();
-    safeSet(AUTH_KEY, JSON.stringify({ mode: 'user', email: email, at: Date.now() }));
-    updateSessionLabel();
+    setAuthSession({ mode: 'user', email: email, at: Date.now() });
     goScreen('home');
     showToast(authMode === 'signup' ? 'Account Created & Signed In' : 'Login Successful');
   }
 
   function continueAsGuest() {
     clearAuthError();
-    safeSet(AUTH_KEY, JSON.stringify({ mode: 'guest', email: null, at: Date.now() }));
-    updateSessionLabel();
+    setAuthSession({ mode: 'guest', email: null, at: Date.now() });
     goScreen('home');
     showToast('Guest Mode Active');
   }
@@ -441,6 +480,7 @@
     safeRemove(AUTH_KEY);
     updateSessionLabel();
     goScreen('login');
+    showToast('Signed out');
   }
 
   function getHistory() {
@@ -554,8 +594,8 @@
     document.getElementById('res-title').textContent = res.title;
     document.getElementById('res-meta').textContent = res.channel + ' • ' + res.time;
     document.getElementById('res-original').textContent = res.fullText;
-    document.getElementById('res-reasons').innerHTML = res.reasons.map(r => '<li>' + r + '</li>').join('');
-    document.getElementById('res-actions').innerHTML = res.actions.map(a => '<li>' + a + '</li>').join('');
+    document.getElementById('res-reasons').innerHTML = res.reasons.map(r => '<li>' + escapeHtml(r) + '</li>').join('');
+    document.getElementById('res-actions').innerHTML = res.actions.map(a => '<li>' + escapeHtml(a) + '</li>').join('');
   }
 
   function updateHome() {
@@ -569,24 +609,30 @@
     } else {
       recent.innerHTML = list.slice(0, 2).map(x =>
         '<div class="recentCard" onclick="openRecord(' + x.id + ')"><div class="rowBetween"><span class="badge ' +
-        (x.level === 'HIGH' ? 'badge-high' : x.level === 'MED' ? 'badge-med' : 'badge-low') + '">' + x.level +
-        '</span><span class="tiny muted">' + x.time + '</span></div><div class="tiny" style="margin-top:5px;">' + x.snippet + '</div></div>'
+        (x.level === 'HIGH' ? 'badge-high' : x.level === 'MED' ? 'badge-med' : 'badge-low') + '">' + escapeHtml(x.level) +
+        '</span><span class="tiny muted">' + escapeHtml(x.time) + '</span></div><div class="tiny" style="margin-top:5px;">' + escapeHtml(x.snippet) + '</div></div>'
       ).join('');
     }
   }
 
   function renderHistory() {
     const container = document.getElementById('history-list');
-    const list = getHistory();
+    const q = ((document.getElementById('history-search') && document.getElementById('history-search').value) || '').trim().toLowerCase();
+    const list = getHistory().filter(x => !q ||
+      String(x.title || '').toLowerCase().includes(q) ||
+      String(x.channel || '').toLowerCase().includes(q) ||
+      String(x.fullText || '').toLowerCase().includes(q) ||
+      String(x.level || '').toLowerCase().includes(q)
+    );
     if (list.length === 0) {
-      container.innerHTML = '<div class="tiny muted">No scan history yet.</div>';
+      container.innerHTML = '<div class="tiny muted">No matching scan history.</div>';
       return;
     }
     container.innerHTML = list.map(x =>
       '<div class="recentCard" onclick="openRecord(' + x.id + ')"><div class="rowBetween"><span class="badge ' +
-      (x.level === 'HIGH' ? 'badge-high' : x.level === 'MED' ? 'badge-med' : 'badge-low') + '">' + x.level + ' (' + x.score +
-      ')</span><span class="tiny muted">' + x.time + '</span></div><div class="small" style="font-weight:700;margin-top:5px;">' + x.title +
-      '</div><div class="tiny muted" style="margin-top:3px;">' + x.snippet + '</div></div>'
+      (x.level === 'HIGH' ? 'badge-high' : x.level === 'MED' ? 'badge-med' : 'badge-low') + '">' + escapeHtml(x.level) + ' (' + escapeHtml(x.score) +
+      ')</span><span class="tiny muted">' + escapeHtml(x.time) + '</span></div><div class="small" style="font-weight:700;margin-top:5px;">' + escapeHtml(x.title) +
+      '</div><div class="tiny muted" style="margin-top:3px;">' + escapeHtml(x.snippet) + '</div></div>'
     ).join('');
   }
 
@@ -598,6 +644,18 @@
     }
   }
 
+  function exportHistoryJson() {
+    const data = JSON.stringify(getHistory(), null, 2);
+    const blob = new Blob([data], { type: 'application/json' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = 'scamlens-history.json';
+    a.click();
+    URL.revokeObjectURL(url);
+    showToast('Exported scan history');
+  }
+
   function clearHistory() {
     saveHistory([]);
     renderHistory();
@@ -606,7 +664,7 @@
   }
 
   updateSessionLabel();
-  if (getSession()) {
+  if (getAuthSession()) {
     goScreen('home');
   } else {
     goScreen('login');
